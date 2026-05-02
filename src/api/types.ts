@@ -1,30 +1,20 @@
 // Types mirror AtomicFi OpenAPI schemas (atomicfi-openapi.yaml).
-// Field names + enums are kept exact so the rewire to @atomic-fi/sdk is a one-line swap.
+// Field names + enums kept exact so the rewire to @atomic-fi/sdk is a one-line swap.
 
 export type UUID = string;
 
 export type TransactionStatus =
-  | "pending"
-  | "accepted"
-  | "settled"
-  | "rejected"
-  | "reversed"
-  | "cancelled";
+  | "pending" | "accepted" | "settled" | "rejected" | "reversed" | "cancelled";
 
 export type TransactionType =
-  | "credit_transfer"
-  | "direct_debit"
-  | "card_payment"
-  | "refund"
-  | "reversal"
-  | "internal_transfer";
+  | "credit_transfer" | "direct_debit" | "card_payment" | "refund" | "reversal" | "internal_transfer";
 
 export interface TransactionResponse {
   id: UUID;
   transaction_type: TransactionType;
   status: TransactionStatus | null;
-  amount: number; // minor units
-  currency: string; // ISO 4217
+  amount: number;
+  currency: string;
   end_to_end_id: string | null;
   uetr: string | null;
   instruction_id: string | null;
@@ -86,17 +76,12 @@ export interface BeneficialOwnerResponse {
   inserted_at: string;
 }
 
-export type KycRequirementStatus =
-  | "pending"
-  | "submitted"
-  | "approved"
-  | "rejected"
-  | "waived";
+export type KycRequirementStatus = "pending" | "submitted" | "approved" | "rejected" | "waived";
 
 export interface KycRequirementResponse {
   id: UUID;
   account_holder_id: UUID;
-  requirement_type: string; // e.g. proof_of_address, id_document
+  requirement_type: string;
   status: KycRequirementStatus;
   document_id: UUID | null;
   notes: string | null;
@@ -130,8 +115,8 @@ export interface SanctionsMatchResponse {
   id: UUID;
   compliance_screening_id: UUID;
   matched_name: string;
-  list_name: string; // OFAC SDN, EU CFSP, UN, …
-  score: number; // 0–100
+  list_name: string;
+  score: number;
   false_positive_qualifier: string | null;
   reviewer: string | null;
   justification: string | null;
@@ -154,4 +139,54 @@ export interface LedgerAccountBalanceResponse {
   balance: number;
   currency: string;
   as_of: string;
+}
+
+// ───── Engineer / platform
+export interface ApiKeyResponse {
+  id: UUID;
+  name: string;
+  customer_id: UUID | null;
+  role_id: UUID;
+  tenant_id: UUID;
+  inserted_at: string;
+  last_used_at: string | null;
+  raw_key?: string; // returned only on create
+}
+
+export interface TenantResponse {
+  id: UUID;
+  name: string;
+  slug: string;
+  region: string;
+  blocklist_refreshed_at: string | null;
+  inserted_at: string;
+}
+
+export interface ApiInfoResponse {
+  version: string;
+  build: string;
+  database_status: "ok" | "degraded" | "down";
+  uptime_seconds: number;
+  release_channel: string;
+}
+
+// ───── Recommendations (mock — really sourced from alvera-ai/platform)
+export type RecommendationKind =
+  | "add_blocklist_entry"
+  | "raise_risk_classification"
+  | "request_kyc_document"
+  | "suspend_counterparty";
+
+export interface Recommendation {
+  id: UUID;
+  kind: RecommendationKind;
+  subject_type: "account_holder" | "counterparty" | "transaction";
+  subject_id: UUID;
+  subject_label: string;
+  signal: string;
+  rationale: string;
+  confidence: number; // 0–1
+  created_at: string;
+  status: "open" | "approved" | "dismissed";
+  payload: Record<string, unknown>;
 }

@@ -1,5 +1,7 @@
 import type {
   AccountHolderResponse,
+  ApiInfoResponse,
+  ApiKeyResponse,
   BeneficialOwnerResponse,
   ComplianceScreeningResponse,
   CounterpartyResponse,
@@ -7,7 +9,9 @@ import type {
   KycRequirementResponse,
   LedgerAccountBalanceResponse,
   LedgerEntryResponse,
+  Recommendation,
   SanctionsMatchResponse,
+  TenantResponse,
   TransactionResponse,
   TransactionStatus,
   TransactionType,
@@ -177,6 +181,98 @@ export const ledgerAccountBalances: LedgerAccountBalanceResponse[] = [
   { id: uid(3102), ledger_account_id: uid(3002), account_label: "Operating GBP", balance: 3_900_000, currency: "GBP", as_of: iso(today) },
   { id: uid(3103), ledger_account_id: uid(3003), account_label: "Reserve USD", balance: 25_000_000, currency: "USD", as_of: iso(today) },
   { id: uid(3104), ledger_account_id: uid(3004), account_label: "JPY Settlement", balance: 8_900_000, currency: "JPY", as_of: iso(today) },
+];
+
+// ───── Tenants
+export const tenants: TenantResponse[] = [
+  { id: TENANT, name: "Acme Corp · Sandbox", slug: "acme-sandbox", region: "us-east-1", blocklist_refreshed_at: iso(daysAgo(0)), inserted_at: iso(daysAgo(120)) },
+  { id: uid(11), name: "Acme Corp · Production", slug: "acme-prod", region: "us-east-1", blocklist_refreshed_at: iso(daysAgo(1)), inserted_at: iso(daysAgo(120)) },
+  { id: uid(12), name: "Lumière Studio", slug: "lumiere", region: "eu-west-1", blocklist_refreshed_at: iso(daysAgo(3)), inserted_at: iso(daysAgo(40)) },
+];
+
+// ───── API keys
+export const apiKeys: ApiKeyResponse[] = [
+  { id: uid(901), name: "ops-dashboard", customer_id: null, role_id: uid(800), tenant_id: TENANT, inserted_at: iso(daysAgo(40)), last_used_at: iso(daysAgo(0)) },
+  { id: uid(902), name: "platform-agent", customer_id: null, role_id: uid(801), tenant_id: TENANT, inserted_at: iso(daysAgo(60)), last_used_at: iso(daysAgo(2)) },
+  { id: uid(903), name: "etl-readonly", customer_id: null, role_id: uid(802), tenant_id: TENANT, inserted_at: iso(daysAgo(90)), last_used_at: iso(daysAgo(7)) },
+];
+
+// ───── API info
+export const apiInfo: ApiInfoResponse = {
+  version: "2026.04.18",
+  build: "atomicfi-api@a91c4f2",
+  database_status: "ok",
+  uptime_seconds: 3 * 86_400 + 11 * 3_600,
+  release_channel: "stable",
+};
+
+// ───── Recommendations (from the alvera-ai/platform mock stream)
+export const recommendations: Recommendation[] = [
+  {
+    id: uid(1101),
+    kind: "add_blocklist_entry",
+    subject_type: "counterparty",
+    subject_id: uid(203),
+    subject_label: "ShadowBank Holdings",
+    signal: "OFAC SDN delta · 2 hrs ago",
+    rationale: "Newly designated entity matched at 96% on legal name and country.",
+    confidence: 0.97,
+    created_at: iso(daysAgo(0)),
+    status: "open",
+    payload: { list: "OFAC_SDN", reason: "Sanctions match" },
+  },
+  {
+    id: uid(1102),
+    kind: "raise_risk_classification",
+    subject_type: "account_holder",
+    subject_id: uid(105),
+    subject_label: "Cairo Trade Co",
+    signal: "Adverse media · Reuters",
+    rationale: "Three independent reports of trade-finance fraud in the past 30 days.",
+    confidence: 0.82,
+    created_at: iso(daysAgo(0)),
+    status: "open",
+    payload: { from: "high", to: "prohibited" },
+  },
+  {
+    id: uid(1103),
+    kind: "request_kyc_document",
+    subject_type: "account_holder",
+    subject_id: uid(103),
+    subject_label: "Nordic Freight AB",
+    signal: "Onboarding stalled 14d",
+    rationale: "UBO disclosure outstanding past internal SLA. Auto-request a fresh upload.",
+    confidence: 0.74,
+    created_at: iso(daysAgo(1)),
+    status: "open",
+    payload: { requirement_type: "ubo_disclosure" },
+  },
+  {
+    id: uid(1104),
+    kind: "suspend_counterparty",
+    subject_type: "counterparty",
+    subject_id: uid(207),
+    subject_label: "Banco Atlántico",
+    signal: "Regulatory action · OCC",
+    rationale: "OCC cease-and-desist published this morning. Suspend pending review.",
+    confidence: 0.88,
+    created_at: iso(daysAgo(0)),
+    status: "open",
+    payload: { status: "suspended" },
+  },
+  {
+    id: uid(1105),
+    kind: "raise_risk_classification",
+    subject_type: "account_holder",
+    subject_id: uid(107),
+    subject_label: "Maria González",
+    signal: "KYC document rejected",
+    rationale: "Pattern of expired ID submissions across two onboarding attempts.",
+    confidence: 0.66,
+    created_at: iso(daysAgo(2)),
+    status: "open",
+    payload: { from: "high", to: "prohibited" },
+  },
 ];
 
 // ───── Helpers
