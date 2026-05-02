@@ -93,7 +93,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup defaultOpen={role === "compliance"} open={role === "compliance" || undefined}>
+        <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Compliance</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
@@ -111,7 +111,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup defaultOpen={role === "engineer"} open={role === "engineer" || undefined}>
+        <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Engineer</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
