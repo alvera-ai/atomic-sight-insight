@@ -1,5 +1,5 @@
 import type { TransactionResponse, TransactionStatus, TransactionType } from "@/api/types";
-import { transactions } from "@/data/fixtures";
+import { counterparties, transactions } from "@/data/fixtures";
 
 export type CopilotToolStep = {
   tool: "search_tables" | "get_schema" | "get_related_tables" | "execute_query";
