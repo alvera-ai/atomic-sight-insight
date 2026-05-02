@@ -21,7 +21,7 @@ export type ResultColumn = { key: string; label: string };
 
 export type CopilotResolution = {
   steps: CopilotToolStep[];
-  rows: Array<Record<string, unknown>>;
+  rows: unknown[];
   txRows: TransactionResponse[]; // populated only when results are transactions
   columns: ResultColumn[];
   sql: string;
@@ -29,7 +29,7 @@ export type CopilotResolution = {
   primaryTable: string;
 };
 
-const TABLES: Record<string, () => Array<Record<string, unknown>>> = {
+const TABLES: Record<string, () => unknown[]> = {
   transactions: () => transactions,
   account_holders: () => accountHolders,
   counterparties: () => counterparties,
@@ -191,7 +191,7 @@ export function resolveNlQuery(prompt: string): CopilotResolution {
 function mkTx(args: { prompt: string; tables: string[]; sql: string; rows: TransactionResponse[]; explanation: string; }): CopilotResolution {
   return mk({
     prompt: args.prompt, primaryTable: "transactions", tables: args.tables, sql: args.sql,
-    rows: args.rows as unknown as Array<Record<string, unknown>>,
+    rows: args.rows as unknown as unknown[],
     columns: [
       { key: "id", label: "id" },
       { key: "transaction_type", label: "type" },
@@ -207,7 +207,7 @@ function mk(args: {
   primaryTable: string;
   tables: string[];
   sql: string;
-  rows: Array<Record<string, unknown>>;
+  rows: unknown[];
   columns: ResultColumn[];
   explanation: string;
 }): CopilotResolution {
