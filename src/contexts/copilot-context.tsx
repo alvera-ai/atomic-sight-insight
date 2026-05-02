@@ -54,7 +54,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
   }, [prompt]);
 
   const applyToView = useCallback(() => {
-    if (resolution) setAppliedRows(resolution.rows);
+    if (resolution) setAppliedRows(resolution.txRows);
   }, [resolution]);
 
   const clearApplied = useCallback(() => setAppliedRows(null), []);
