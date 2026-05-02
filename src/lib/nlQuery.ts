@@ -169,7 +169,7 @@ export function resolveNlQuery(prompt: string): CopilotResolution {
       return mk({
         prompt: p, primaryTable: name, tables: [name],
         sql: `SELECT * FROM ${name} LIMIT 50;`,
-        rows, columns: colsFromRow(rows[0] ?? {}),
+        rows, columns: colsFromRow((rows[0] ?? {}) as Record<string, unknown>),
         explanation: `First 50 rows from ${name}.`,
       });
     }
