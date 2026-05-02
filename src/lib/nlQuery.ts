@@ -30,11 +30,7 @@ export function resolveNlQuery(prompt: string): CopilotResolution {
   if (matchAny(lower, "sanction", "blocked counterparty", "blocked counterparties", "ofac")) {
     const blocked = new Set(["blocked", "under_review", "suspended"]);
     const cpIds = new Set(
-      // dynamic import shape: re-derive at call time
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require("@/data/fixtures").counterparties
-        .filter((c: { status: string; id: string }) => blocked.has(c.status))
-        .map((c: { id: string }) => c.id),
+      counterparties.filter((c) => blocked.has(c.status)).map((c) => c.id),
     );
     const rows = all().filter((t) => t.creditor_counterparty_id && cpIds.has(t.creditor_counterparty_id));
     return mkResolution({
