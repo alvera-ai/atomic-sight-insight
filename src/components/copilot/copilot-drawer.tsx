@@ -155,29 +155,38 @@ export function CopilotDrawer() {
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 text-left text-muted-foreground">
                       <tr>
-                        <th className="px-3 py-1.5 font-medium">id</th>
-                        <th className="px-3 py-1.5 font-medium">type</th>
-                        <th className="px-3 py-1.5 font-medium">status</th>
-                        <th className="px-3 py-1.5 font-medium text-right">amount</th>
+                        {c.resolution.columns.map((col) => (
+                          <th key={col.key} className="px-3 py-1.5 font-medium">{col.label}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {c.resolution.rows.map((r) => (
-                        <tr key={r.id} className="border-t">
-                          <td className="px-3 py-1.5 font-mono">{shortId(r.id)}</td>
-                          <td className="px-3 py-1.5">{r.transaction_type}</td>
-                          <td className="px-3 py-1.5">
-                            <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", statusClass(r.status))}>
-                              {r.status}
-                            </span>
-                          </td>
-                          <td className="px-3 py-1.5 text-right font-mono">
-                            {formatAmount(r.amount, r.currency)}
-                          </td>
+                      {(c.resolution.rows as Array<Record<string, unknown>>).map((r, i) => (
+                        <tr key={(r.id as string) ?? i} className="border-t">
+                          {c.resolution!.columns.map((col) => {
+                            const v = r[col.key];
+                            const isStatus = ["status", "kyc_status", "risk_level"].includes(col.key);
+                            const isMoney = col.key === "amount" && typeof r.currency === "string";
+                            return (
+                              <td key={col.key} className={cn("px-3 py-1.5", isMoney && "text-right font-mono")}>
+                                {isStatus ? (
+                                  <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", statusClass(String(v ?? "")))}>
+                                    {String(v ?? "—")}
+                                  </span>
+                                ) : isMoney ? (
+                                  formatAmount(Number(v ?? 0), String(r.currency))
+                                ) : col.key === "id" ? (
+                                  <span className="font-mono">{shortId(String(v ?? ""), 10)}</span>
+                                ) : (
+                                  <span className="capitalize">{String(v ?? "—").replace(/_/g, " ")}</span>
+                                )}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                       {c.resolution.rows.length === 0 && (
-                        <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">No rows.</td></tr>
+                        <tr><td colSpan={c.resolution.columns.length} className="px-3 py-6 text-center text-muted-foreground">No rows.</td></tr>
                       )}
                     </tbody>
                   </table>
