@@ -49,16 +49,24 @@ export function CreateFlagDialog({ open, onOpenChange, transactionId, defaultTit
 
   const submit = async () => {
     if (!description.trim() || !due) return;
-    await createCase({
+    const title = defaultTitle ?? `Flagged transaction ${transactionId.slice(0, 8)}`;
+    const created = await createCase({
       type,
       status: "open",
       priority,
-      title: defaultTitle ?? `Flagged transaction ${transactionId.slice(0, 8)}`,
+      title,
       description: description.trim(),
       source_id: transactionId,
       source_type: "transaction",
       assigned_to: assignee,
       due_date: due.toISOString(),
+    });
+    logAudit({
+      action_type: "case.created",
+      resource_type: "case",
+      resource_id: created.id,
+      description: `Created case '${title}'`,
+      metadata: { type, priority },
     });
     toast.success("Flag created", { description: `Case opened · ${type.replace(/_/g, " ")}` });
     reset();
