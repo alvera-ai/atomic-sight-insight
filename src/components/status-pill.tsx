@@ -41,9 +41,7 @@ const STATUS_CLASSES: Record<string, string> = {
   sandbox: "bg-info/15 text-info border-info/20",
   archived: "bg-muted text-muted-foreground border-border",
 
-  // Rule severity
-  critical: "bg-destructive/25 text-destructive border-destructive/30",
-  // (high, medium, low already defined above)
+  // Rule severity (high, medium, low, critical already defined above)
 
   // Rule action
   flag: "bg-warning/20 text-warning-foreground border-warning/30",
