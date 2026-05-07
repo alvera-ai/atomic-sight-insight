@@ -31,7 +31,8 @@ export function OutreachTab({
 
   useEffect(() => {
     refresh();
-    return subscribeOutreach(refresh);
+    const unsub = subscribeOutreach(refresh);
+    return () => { unsub(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectType, subjectId]);
 
