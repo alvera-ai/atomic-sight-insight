@@ -186,7 +186,24 @@ const delay = <T,>(v: T, ms = 150) => new Promise<T>((r) => setTimeout(() => r(v
 
 export const listCases = () => delay([...cases]);
 
+export const listCasesBySource = (sourceId: string) =>
+  delay(cases.filter((c) => c.source_id === sourceId));
+
 export const getCaseById = (id: string) => delay(cases.find((c) => c.id === id));
+
+export const createCase = (input: Omit<Case, "id" | "created_at" | "updated_at" | "notes"> & { notes?: CaseNote[] }): Promise<Case> => {
+  const now = new Date().toISOString();
+  const created: Case = {
+    id: `case_${Math.random().toString(16).slice(2, 8)}`,
+    notes: input.notes ?? [],
+    ...input,
+    created_at: now,
+    updated_at: now,
+  };
+  cases = [created, ...cases];
+  notify();
+  return delay(created);
+};
 
 export const updateCase = (id: string, patch: Partial<Case>): Promise<Case> => {
   cases = cases.map((c) => (c.id === id ? { ...c, ...patch, updated_at: new Date().toISOString() } : c));

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle2, FileUp, PauseCircle, Plus, ShieldX } from "lucide-react";
+import { Briefcase, CalendarIcon, CheckCircle2, FileUp, PauseCircle, Plus, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   createDocument,
   listAccountHolders, listDocuments, listKycRequirements,
@@ -21,14 +24,19 @@ import type {
 } from "@/api/types";
 import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { cn } from "@/lib/utils";
 import { shortId } from "@/lib/money";
 import { useRuleHits } from "@/hooks/use-rule-hits";
 import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
 import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
+import { CasesSection } from "@/components/cases/cases-section";
+import { createCase, type CasePriority } from "@/api/cases";
+import { usePermission } from "@/hooks/use-permission";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
+const ONBOARDING_ASSIGNEES = ["Unassigned", "Ana Martins", "James Osei", "Priya Nair"];
 
 export default function OnboardingPage() {
   const [holders, setHolders] = useState<AccountHolderResponse[]>([]);
@@ -37,6 +45,9 @@ export default function OnboardingPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [kycs, setKycs] = useState<KycRequirementResponse[]>([]);
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [openCaseDialog, setOpenCaseDialog] = useState(false);
+  const canReassign = usePermission("onboarding.approve"); // officer + analyst
 
   useEffect(() => {
     listAccountHolders().then((all) => {
@@ -132,6 +143,28 @@ export default function OnboardingPage() {
                 <StatusPill value={selected.risk_level} />
               </div>
             </div>
+            <div className="mt-3 flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+              <Label className="text-[11px] text-muted-foreground">Assigned to</Label>
+              {canReassign ? (
+                <Select
+                  value={assignments[selected.id] ?? "Unassigned"}
+                  onValueChange={(v) => {
+                    setAssignments((prev) => ({ ...prev, [selected.id]: v }));
+                    sonnerToast.success("Reassigned", { description: v });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ONBOARDING_ASSIGNEES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm font-medium">{assignments[selected.id] ?? "Unassigned"}</span>
+              )}
+              <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setOpenCaseDialog(true)}>
+                <Briefcase className="h-3.5 w-3.5" /> Open case
+              </Button>
+            </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px] text-muted-foreground">KYC status</Label>
@@ -166,6 +199,15 @@ export default function OnboardingPage() {
               </Button>
             </div>
           </Card>
+
+          <CasesSection sourceId={selected.id} title="Cases for this holder" />
+
+          <OpenOnboardingCaseDialog
+            open={openCaseDialog}
+            onOpenChange={setOpenCaseDialog}
+            holder={selected}
+            assignedTo={assignments[selected.id] ?? "Unassigned"}
+          />
 
           <Card className="p-0">
             <div className="flex items-center justify-between border-b px-4 py-2.5">
@@ -331,3 +373,95 @@ function HolderHits({ holderId }: { holderId: string }) {
     </>
   );
 }
+
+function OpenOnboardingCaseDialog({
+  open, onOpenChange, holder, assignedTo,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  holder: AccountHolderResponse;
+  assignedTo: string;
+}) {
+  const [priority, setPriority] = useState<CasePriority>("medium");
+  const [description, setDescription] = useState("");
+  const [due, setDue] = useState<Date | undefined>(() => new Date(Date.now() + 5 * 86_400_000));
+  const [assignee, setAssignee] = useState(assignedTo);
+
+  useEffect(() => { setAssignee(assignedTo); }, [assignedTo, open]);
+
+  const submit = async () => {
+    if (!description.trim() || !due) return;
+    await createCase({
+      type: "onboarding_review",
+      status: "open",
+      priority,
+      title: `Onboarding review · ${holder.display_name}`,
+      description: description.trim(),
+      source_id: holder.id,
+      source_type: "account_holder",
+      assigned_to: assignee,
+      due_date: due.toISOString(),
+    });
+    sonnerToast.success("Case opened", { description: `Onboarding review · ${holder.display_name}` });
+    setDescription("");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Open onboarding case</DialogTitle>
+          <DialogDescription>Create a case linked to {holder.display_name}.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Priority</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as CasePriority)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(["critical", "high", "medium", "low"] as CasePriority[]).map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Assign to</Label>
+              <Select value={assignee} onValueChange={setAssignee}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ONBOARDING_ASSIGNEES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What needs review?" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Due date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal", !due && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                  {due ? format(due, "yyyy-MM-dd") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={due} onSelect={setDue} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={!description.trim() || !due}>Open case</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Building2, RefreshCcw, ShieldCheck, ShieldOff, User } from "lucide-react";
+import { Briefcase, Building2, RefreshCcw, ShieldCheck, ShieldOff, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,9 @@ import type {
 } from "@/api/types";
 import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { cn } from "@/lib/utils";
+import { createCase, listCasesBySource, subscribeCases, type Case } from "@/api/cases";
 
 const FILTERS: Array<ScreeningStatus | "all"> = ["all", "match", "potential_match", "review", "clear"];
 
@@ -34,12 +36,18 @@ const subjectLabel = (s: ComplianceScreeningResponse) => {
   }
 };
 
+const REVIEW_ASSIGNEES = ["Ana Martins", "James Osei", "Priya Nair"];
+
 export default function ReviewPage() {
   const [screenings, setScreenings] = useState<ComplianceScreeningResponse[]>([]);
   const [matches, setMatches] = useState<SanctionsMatchResponse[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ScreeningStatus | "all">("match");
   const [working, setWorking] = useState(false);
+  const [allCases, setAllCases] = useState<Case[]>([]);
+  const [assignDialogFor, setAssignDialogFor] = useState<ComplianceScreeningResponse | null>(null);
+  const [assignTo, setAssignTo] = useState<string>(REVIEW_ASSIGNEES[0]);
+  const [assignPriority, setAssignPriority] = useState<"critical" | "high" | "medium" | "low">("high");
 
   useEffect(() => {
     listComplianceScreenings().then((s) => {
@@ -53,6 +61,39 @@ export default function ReviewPage() {
     if (!selectedId) { setMatches([]); return; }
     listSanctionsMatches(selectedId).then(setMatches);
   }, [selectedId]);
+
+  useEffect(() => {
+    let alive = true;
+    const refresh = async () => {
+      const allLists = await Promise.all(screenings.map((s) => listCasesBySource(s.subject_id)));
+      if (!alive) return;
+      setAllCases(allLists.flat());
+    };
+    refresh();
+    const unsub = subscribeCases(refresh);
+    return () => { alive = false; unsub(); };
+  }, [screenings]);
+
+  const caseForScreening = (s: ComplianceScreeningResponse) =>
+    allCases.find((c) => c.source_id === s.subject_id && c.type === "sanctions_match");
+
+  const submitAssign = async () => {
+    if (!assignDialogFor) return;
+    const s = assignDialogFor;
+    await createCase({
+      type: "sanctions_match",
+      status: "open",
+      priority: assignPriority,
+      title: `Sanctions match · ${subjectLabel(s)}`,
+      description: `Screening ${s.id.slice(0, 6)} from ${s.provider} returned status "${s.status}".`,
+      source_id: s.subject_id,
+      source_type: s.subject_type === "counterparty" ? "account_holder" : "account_holder",
+      assigned_to: assignTo,
+      due_date: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+    });
+    sonnerToast.success("Case assigned", { description: `${subjectLabel(s)} → ${assignTo}` });
+    setAssignDialogFor(null);
+  };
 
   const filtered = useMemo(
     () => (filter === "all" ? screenings : screenings.filter((s) => s.status === filter))
@@ -106,25 +147,44 @@ export default function ReviewPage() {
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {filtered.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSelectedId(s.id)}
-              className={cn(
-                "flex w-full flex-col gap-1 border-b px-3 py-2.5 text-left transition hover:bg-muted/50",
-                selectedId === s.id && "bg-primary/5",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                {s.subject_type === "counterparty" ? <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> : <User className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className="truncate text-sm font-medium">{subjectLabel(s)}</span>
-                <span className="ml-auto"><StatusPill value={s.status} /></span>
+          {filtered.map((s) => {
+            const linkedCase = caseForScreening(s);
+            return (
+              <div
+                key={s.id}
+                className={cn(
+                  "flex w-full flex-col gap-1 border-b px-3 py-2.5 text-left transition",
+                  selectedId === s.id ? "bg-primary/5" : "hover:bg-muted/50",
+                )}
+              >
+                <button onClick={() => setSelectedId(s.id)} className="flex w-full items-center gap-2 text-left">
+                  {s.subject_type === "counterparty" ? <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> : <User className="h-3.5 w-3.5 text-muted-foreground" />}
+                  <span className="truncate text-sm font-medium">{subjectLabel(s)}</span>
+                  <span className="ml-auto"><StatusPill value={s.status} /></span>
+                </button>
+                <div className="text-[11px] text-muted-foreground">
+                  {s.provider} · {format(new Date(s.screened_at), "yyyy-MM-dd HH:mm")}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  {linkedCase ? (
+                    <>
+                      <span className="text-[11px] text-muted-foreground">{linkedCase.assigned_to}</span>
+                      <span className="ml-auto"><StatusPill value={linkedCase.status} /></span>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto h-7 gap-1.5 text-[11px]"
+                      onClick={(e) => { e.stopPropagation(); setAssignDialogFor(s); }}
+                    >
+                      <Briefcase className="h-3 w-3" /> Assign
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="text-[11px] text-muted-foreground">
-                {s.provider} · {format(new Date(s.screened_at), "yyyy-MM-dd HH:mm")}
-              </div>
-            </button>
-          ))}
+            );
+          })}
           {filtered.length === 0 && <div className="p-6 text-center text-xs text-muted-foreground">No matching screenings.</div>}
         </div>
       </div>
