@@ -373,3 +373,95 @@ function HolderHits({ holderId }: { holderId: string }) {
     </>
   );
 }
+
+function OpenOnboardingCaseDialog({
+  open, onOpenChange, holder, assignedTo,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  holder: AccountHolderResponse;
+  assignedTo: string;
+}) {
+  const [priority, setPriority] = useState<CasePriority>("medium");
+  const [description, setDescription] = useState("");
+  const [due, setDue] = useState<Date | undefined>(() => new Date(Date.now() + 5 * 86_400_000));
+  const [assignee, setAssignee] = useState(assignedTo);
+
+  useEffect(() => { setAssignee(assignedTo); }, [assignedTo, open]);
+
+  const submit = async () => {
+    if (!description.trim() || !due) return;
+    await createCase({
+      type: "onboarding_review",
+      status: "open",
+      priority,
+      title: `Onboarding review · ${holder.display_name}`,
+      description: description.trim(),
+      source_id: holder.id,
+      source_type: "account_holder",
+      assigned_to: assignee,
+      due_date: due.toISOString(),
+    });
+    sonnerToast.success("Case opened", { description: `Onboarding review · ${holder.display_name}` });
+    setDescription("");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Open onboarding case</DialogTitle>
+          <DialogDescription>Create a case linked to {holder.display_name}.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Priority</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as CasePriority)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(["critical", "high", "medium", "low"] as CasePriority[]).map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Assign to</Label>
+              <Select value={assignee} onValueChange={setAssignee}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ONBOARDING_ASSIGNEES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What needs review?" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Due date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal", !due && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                  {due ? format(due, "yyyy-MM-dd") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={due} onSelect={setDue} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={!description.trim() || !due}>Open case</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
