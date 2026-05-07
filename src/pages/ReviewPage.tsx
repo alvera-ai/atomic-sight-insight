@@ -147,25 +147,44 @@ export default function ReviewPage() {
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {filtered.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSelectedId(s.id)}
-              className={cn(
-                "flex w-full flex-col gap-1 border-b px-3 py-2.5 text-left transition hover:bg-muted/50",
-                selectedId === s.id && "bg-primary/5",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                {s.subject_type === "counterparty" ? <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> : <User className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className="truncate text-sm font-medium">{subjectLabel(s)}</span>
-                <span className="ml-auto"><StatusPill value={s.status} /></span>
+          {filtered.map((s) => {
+            const linkedCase = caseForScreening(s);
+            return (
+              <div
+                key={s.id}
+                className={cn(
+                  "flex w-full flex-col gap-1 border-b px-3 py-2.5 text-left transition",
+                  selectedId === s.id ? "bg-primary/5" : "hover:bg-muted/50",
+                )}
+              >
+                <button onClick={() => setSelectedId(s.id)} className="flex w-full items-center gap-2 text-left">
+                  {s.subject_type === "counterparty" ? <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> : <User className="h-3.5 w-3.5 text-muted-foreground" />}
+                  <span className="truncate text-sm font-medium">{subjectLabel(s)}</span>
+                  <span className="ml-auto"><StatusPill value={s.status} /></span>
+                </button>
+                <div className="text-[11px] text-muted-foreground">
+                  {s.provider} · {format(new Date(s.screened_at), "yyyy-MM-dd HH:mm")}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  {linkedCase ? (
+                    <>
+                      <span className="text-[11px] text-muted-foreground">{linkedCase.assigned_to}</span>
+                      <span className="ml-auto"><StatusPill value={linkedCase.status} /></span>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto h-7 gap-1.5 text-[11px]"
+                      onClick={(e) => { e.stopPropagation(); setAssignDialogFor(s); }}
+                    >
+                      <Briefcase className="h-3 w-3" /> Assign
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="text-[11px] text-muted-foreground">
-                {s.provider} · {format(new Date(s.screened_at), "yyyy-MM-dd HH:mm")}
-              </div>
-            </button>
-          ))}
+            );
+          })}
           {filtered.length === 0 && <div className="p-6 text-center text-xs text-muted-foreground">No matching screenings.</div>}
         </div>
       </div>
