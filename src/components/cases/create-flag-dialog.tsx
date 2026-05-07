@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createCase, type CasePriority, type CaseType } from "@/api/cases";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 
 type FlagType = Extract<CaseType, "rule_breach" | "sanctions_match" | "transaction_flag">;
 
