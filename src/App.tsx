@@ -28,7 +28,7 @@ const App = () => (
         <Routes>
           <Route element={<AppLayout />}>
             <Route element={<RouteGuard />}>
-              <Route path="/" element={<Navigate to="/transactions" replace />} />
+              <Route path="/" element={<RoleHome />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
