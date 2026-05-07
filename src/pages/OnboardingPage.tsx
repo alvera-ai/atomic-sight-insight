@@ -78,7 +78,7 @@ export default function OnboardingPage() {
     if (!selected || checklists[selected.id]) return;
     const volume = allTransactions
       .filter((t) => t.account_holder_id === selected.id)
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0) / 100; // amounts are minor units in this app
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     setChecklists((prev) => ({ ...prev, [selected.id]: seedChecklist(selected, volume) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, holders.length, allTransactions.length]);
