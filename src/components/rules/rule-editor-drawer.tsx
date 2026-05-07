@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { JdmGraphEditor } from "@/components/rules/jdm-graph-editor";
 import { SandboxRunner } from "@/components/rules/sandbox-runner";
+import { BacktestTab } from "@/components/rules/backtest-tab";
 import { newGroup } from "@/lib/rules/engine";
 import { conditionTreeToJdm, emptyJdmGraph } from "@/lib/rules/jdm";
 import { archiveRule, createRule, deleteRule, promoteRule, restoreRule, saveRule } from "@/api/rules";
