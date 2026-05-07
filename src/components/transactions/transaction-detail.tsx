@@ -61,6 +61,8 @@ import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { usePermission } from "@/hooks/use-permission";
 import { CreateFlagDialog } from "@/components/cases/create-flag-dialog";
 import { CasesSection } from "@/components/cases/cases-section";
+import { OutreachTab } from "@/components/outreach/outreach-tab";
+import { OutreachComposer } from "@/components/outreach/outreach-composer";
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
