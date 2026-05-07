@@ -43,6 +43,7 @@ const compliance = [
   { title: "Rules", url: "/rules", icon: Scale },
   { title: "Talk to data", url: "/talk-to-data", icon: MessageSquareCode },
   { title: "Recommendations", url: "/recommendations", icon: Sparkles },
+  { title: "Audit log", url: "/audit", icon: ShieldCheck },
 ];
 
 const engineer = [
