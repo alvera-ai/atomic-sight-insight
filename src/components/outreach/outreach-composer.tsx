@@ -28,6 +28,8 @@ interface OutreachComposerProps {
   customerName: string;
   customerEmail: string;
   onSent?: () => void;
+  prefilledTemplate?: string;
+  prefilledDocs?: string[];
 }
 
 function applyPlaceholders(text: string, customerName: string, subjectId: string) {
