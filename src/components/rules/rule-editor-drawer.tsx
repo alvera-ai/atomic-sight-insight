@@ -35,6 +35,7 @@ import { toast } from "@/hooks/use-toast";
 import { usePermission } from "@/hooks/use-permission";
 import { useAuth } from "@/contexts/auth-context";
 import { useAuditLogger } from "@/hooks/use-audit-logger";
+import { cn } from "@/lib/utils";
 
 const emptyRule = (): Rule => ({
   id: crypto.randomUUID(),
