@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createCase, listCasesBySource, subscribeCases, type Case } from "@/api/cases";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 
 const FILTERS: Array<ScreeningStatus | "all"> = ["all", "match", "potential_match", "review", "clear"];
 
