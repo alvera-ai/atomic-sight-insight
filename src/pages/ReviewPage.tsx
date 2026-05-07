@@ -36,12 +36,18 @@ const subjectLabel = (s: ComplianceScreeningResponse) => {
   }
 };
 
+const REVIEW_ASSIGNEES = ["Ana Martins", "James Osei", "Priya Nair"];
+
 export default function ReviewPage() {
   const [screenings, setScreenings] = useState<ComplianceScreeningResponse[]>([]);
   const [matches, setMatches] = useState<SanctionsMatchResponse[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ScreeningStatus | "all">("match");
   const [working, setWorking] = useState(false);
+  const [allCases, setAllCases] = useState<Case[]>([]);
+  const [assignDialogFor, setAssignDialogFor] = useState<ComplianceScreeningResponse | null>(null);
+  const [assignTo, setAssignTo] = useState<string>(REVIEW_ASSIGNEES[0]);
+  const [assignPriority, setAssignPriority] = useState<"critical" | "high" | "medium" | "low">("high");
 
   useEffect(() => {
     listComplianceScreenings().then((s) => {
