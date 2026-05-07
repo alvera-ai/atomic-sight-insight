@@ -45,6 +45,9 @@ export default function OnboardingPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [kycs, setKycs] = useState<KycRequirementResponse[]>([]);
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [openCaseDialog, setOpenCaseDialog] = useState(false);
+  const canReassign = usePermission("onboarding.approve"); // officer + analyst
 
   useEffect(() => {
     listAccountHolders().then((all) => {
