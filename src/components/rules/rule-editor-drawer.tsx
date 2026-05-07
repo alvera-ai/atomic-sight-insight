@@ -200,6 +200,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
                   <Select
                     value={draft.scope}
                     onValueChange={(v) => update({ scope: v as RuleScope })}
+                    disabled={readOnly}
                   >
                     <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -224,6 +225,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
                     onChange={(e) => {
                       try { update({ content: JSON.parse(e.target.value) }); } catch { /* ignore */ }
                     }}
+                    readOnly={readOnly}
                     className="min-h-[420px] font-mono text-[11px]"
                   />
                   <Button
@@ -234,22 +236,24 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
                   </Button>
                 </div>
               ) : (
-                <JdmGraphEditor
-                  value={draft.content ?? conditionTreeToJdm(draft.when, draft.name)}
-                  onChange={(g) => update({ content: g })}
-                />
+                <div className={readOnly ? "pointer-events-none opacity-70" : undefined}>
+                  <JdmGraphEditor
+                    value={draft.content ?? conditionTreeToJdm(draft.when, draft.name)}
+                    onChange={(g) => update({ content: g })}
+                  />
+                </div>
               )}
             </TabsContent>
 
             <TabsContent value="settings" className="m-0 space-y-3">
               <div>
                 <Label className="text-[11px]">Description</Label>
-                <Textarea value={draft.description} onChange={(e) => update({ description: e.target.value })} className="mt-1" />
+                <Textarea value={draft.description} onChange={(e) => update({ description: e.target.value })} readOnly={readOnly} className="mt-1" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[11px]">Severity</Label>
-                  <Select value={draft.severity} onValueChange={(v) => update({ severity: v as RuleSeverity })}>
+                  <Select value={draft.severity} onValueChange={(v) => update({ severity: v as RuleSeverity })} disabled={readOnly}>
                     <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {(["low", "medium", "high", "critical"] as const).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -258,7 +262,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
                 </div>
                 <div>
                   <Label className="text-[11px]">Action</Label>
-                  <Select value={draft.action} onValueChange={(v) => update({ action: v as RuleAction })}>
+                  <Select value={draft.action} onValueChange={(v) => update({ action: v as RuleAction })} disabled={readOnly}>
                     <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {(["flag", "review", "block"] as const).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -268,12 +272,12 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
               </div>
               <div>
                 <Label className="text-[11px]">Threshold ({Math.round(draft.threshold * 100)}%)</Label>
-                <Slider value={[draft.threshold * 100]} min={0} max={100} step={5} onValueChange={(v) => update({ threshold: v[0] / 100 })} className="mt-2" />
+                <Slider value={[draft.threshold * 100]} min={0} max={100} step={5} onValueChange={(v) => update({ threshold: v[0] / 100 })} disabled={readOnly} className="mt-2" />
                 <div className="mt-1 text-[11px] text-muted-foreground">Hit fires only when matched-weight ratio ≥ threshold.</div>
               </div>
               <div>
                 <Label className="text-[11px]">Tags (comma-separated)</Label>
-                <Input value={draft.tags.join(", ")} onChange={(e) => update({ tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })} className="h-8" />
+                <Input value={draft.tags.join(", ")} onChange={(e) => update({ tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })} readOnly={readOnly} className="h-8" />
               </div>
             </TabsContent>
 
@@ -283,6 +287,37 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
           </div>
         </Tabs>
       </SheetContent>
+
+      <AlertDialog open={confirmPromote} onOpenChange={setConfirmPromote}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promote this rule to Live?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will immediately apply to all transactions and account holders.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={doPromote}>Promote to live</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmArchive} onOpenChange={setConfirmArchive}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this rule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The rule will stop evaluating. You can restore it later from the Archived tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={doArchive}>Archive</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
+
