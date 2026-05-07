@@ -16,6 +16,13 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import HealthPage from "./pages/HealthPage";
 import NotFound from "./pages/NotFound";
 import { RouteGuard } from "@/components/auth/route-guard";
+import { useAuth } from "@/contexts/auth-context";
+import { ROLE_DEFAULT_ROUTE } from "@/lib/nav-access";
+
+function RoleHome() {
+  const { user } = useAuth();
+  return <Navigate to={ROLE_DEFAULT_ROUTE[user.role]} replace />;
+}
 
 const queryClient = new QueryClient();
 
