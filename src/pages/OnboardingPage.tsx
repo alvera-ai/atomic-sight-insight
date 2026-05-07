@@ -1,26 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { Briefcase, CalendarIcon, CheckCircle2, FileUp, PauseCircle, Plus, ShieldX } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Briefcase, Flag, Mail, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import {
-  createDocument,
   listAccountHolders, listDocuments, listKycRequirements, listTransactions,
-  updateAccountHolder, updateKycRequirement,
+  updateAccountHolder,
 } from "@/api";
 import type {
-  AccountHolderResponse, DocumentResponse, KycRequirementResponse, KycRequirementStatus, KycStatus, RiskLevel,
+  AccountHolderResponse, DocumentResponse, KycRequirementResponse, KycStatus,
   TransactionResponse,
 } from "@/api/types";
 import { StatusPill } from "@/components/status-pill";
@@ -30,20 +23,38 @@ import { cn } from "@/lib/utils";
 import { shortId } from "@/lib/money";
 import { useRuleHits } from "@/hooks/use-rule-hits";
 import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
-import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { CasesSection } from "@/components/cases/cases-section";
-import { createCase, type CasePriority } from "@/api/cases";
+import { CreateFlagDialog } from "@/components/cases/create-flag-dialog";
 import { usePermission } from "@/hooks/use-permission";
 import { OutreachTab } from "@/components/outreach/outreach-tab";
+import { OutreachComposer } from "@/components/outreach/outreach-composer";
 import { useAuditLogger } from "@/hooks/use-audit-logger";
 import {
   DaysWaitingBadge, DocumentChecklist, OnboardingDecision, type ChecklistDoc,
 } from "@/components/onboarding/document-checklist";
 import { seedChecklist } from "@/components/onboarding/checklist-seed";
+import {
+  DetailPanel, Field, PanelSection, type DetailPanelTab,
+} from "@/components/detail-panel/detail-panel";
+import { AssignDialog, TEAM_MEMBERS } from "@/components/detail-panel/assign-dialog";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
-const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
-const ONBOARDING_ASSIGNEES = ["Unassigned", "Ana Martins", "James Osei", "Priya Nair"];
+
+// Pre-seeded assignments by holder id
+const SEEDED_ASSIGNMENTS: Record<string, string> = {};
+const seedAssign = (n: number, who: string) => {
+  const id = `${n.toString(16).padStart(8, "0")}-aaaa-bbbb-cccc-${n.toString(16).padStart(12, "0")}`;
+  SEEDED_ASSIGNMENTS[id] = who;
+};
+seedAssign(103, "Ana Martins");      // Nordic Freight
+seedAssign(107, "James Osei");       // Maria González
+seedAssign(105, "Priya Nair");       // Cairo Trade
+seedAssign(104, "James Osei");       // Jin Wei
+seedAssign(109, "Ana Martins");      // Volga
+seedAssign(102, "Unassigned");       // Lumière
+
+// Limit onboarding queue to in-progress / not_started / on_hold / rejected
+const ONBOARDING_STATUSES: KycStatus[] = ["not_started", "in_progress", "on_hold", "rejected", "approved"];
 
 export default function OnboardingPage() {
   const [holders, setHolders] = useState<AccountHolderResponse[]>([]);
@@ -52,17 +63,22 @@ export default function OnboardingPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [kycs, setKycs] = useState<KycRequirementResponse[]>([]);
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [assignments, setAssignments] = useState<Record<string, string>>(SEEDED_ASSIGNMENTS);
   const [openCaseDialog, setOpenCaseDialog] = useState(false);
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
   const [allTransactions, setAllTransactions] = useState<TransactionResponse[]>([]);
   const [checklists, setChecklists] = useState<Record<string, ChecklistDoc[]>>({});
-  const canReassign = usePermission("onboarding.approve"); // officer + analyst
+  const [activeTab, setActiveTab] = useState("overview");
+  const canReassign = usePermission("onboarding.approve");
   const logAudit = useAuditLogger();
 
   useEffect(() => {
     listAccountHolders().then((all) => {
-      setHolders(all);
-      if (!selectedId && all[0]) setSelectedId(all[0].id);
+      // Show only those that are part of onboarding queue (any kyc status)
+      const queue = all.filter((h) => ONBOARDING_STATUSES.includes(h.kyc_status));
+      setHolders(queue);
+      if (!selectedId && queue[0]) setSelectedId(queue[0].id);
     });
     listTransactions().then(setAllTransactions);
   }, []);
@@ -73,7 +89,8 @@ export default function OnboardingPage() {
     listDocuments(selectedId).then(setDocs);
   }, [selectedId]);
 
-  // Lazily seed checklist per holder once
+  const selected = holders.find((h) => h.id === selectedId);
+
   useEffect(() => {
     if (!selected || checklists[selected.id]) return;
     const volume = allTransactions
@@ -91,41 +108,21 @@ export default function OnboardingPage() {
     });
   }, [holders, filter, search]);
 
-  const selected = holders.find((h) => h.id === selectedId);
-
   const handleHolderUpdate = async (patch: Partial<AccountHolderResponse>) => {
     if (!selected) return;
     const next = await updateAccountHolder(selected.id, patch);
     setHolders((prev) => prev.map((h) => (h.id === next.id ? next : h)));
     if (patch.kyc_status === "approved") {
-      logAudit({
-        action_type: "onboarding.approved",
-        resource_type: "account_holder",
-        resource_id: next.id,
-        description: `Approved KYC for ${next.display_name}`,
-        metadata: {},
-      });
+      logAudit({ action_type: "onboarding.approved", resource_type: "account_holder", resource_id: next.id, description: `Approved KYC for ${next.display_name}`, metadata: {} });
     } else if (patch.kyc_status === "rejected") {
-      logAudit({
-        action_type: "onboarding.rejected",
-        resource_type: "account_holder",
-        resource_id: next.id,
-        description: `Rejected KYC for ${next.display_name}`,
-        metadata: {},
-      });
+      logAudit({ action_type: "onboarding.rejected", resource_type: "account_holder", resource_id: next.id, description: `Rejected KYC for ${next.display_name}`, metadata: {} });
     }
     toast({ title: "Account holder updated", description: `PUT /api/account-holders/${shortId(next.id, 6)}` });
   };
 
-  const handleKycUpdate = async (id: string, status: KycRequirementStatus) => {
-    const next = await updateKycRequirement(id, { status });
-    setKycs((prev) => prev.map((k) => (k.id === id ? next : k)));
-    toast({ title: "KYC requirement updated", description: `PUT /api/kyc-requirements/${shortId(id, 6)}` });
-  };
-
   return (
     <div className="flex h-full">
-      <div className="flex w-[340px] shrink-0 flex-col border-r bg-background">
+      <div className="flex w-[360px] shrink-0 flex-col border-r bg-background">
         <div className="border-b p-3">
           <h1 className="text-lg font-semibold tracking-tight">Onboarding queue</h1>
           <p className="text-xs text-muted-foreground">{filtered.length} of {holders.length} account holders</p>
@@ -140,27 +137,33 @@ export default function OnboardingPage() {
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {filtered.map((h) => (
-            <button
-              key={h.id}
-              onClick={() => setSelectedId(h.id)}
-              className={cn(
-                "flex w-full flex-col gap-1 border-b px-3 py-2.5 text-left transition hover:bg-muted/50",
-                selectedId === h.id && "bg-primary/5",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium">{h.display_name}</span>
-                <span className="ml-auto"><StatusPill value={h.kyc_status} /></span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <span>{h.country}</span>
-                <span>·</span>
-                <span>{h.entity_type}</span>
-                <StatusPill value={h.risk_level} />
-              </div>
-            </button>
-          ))}
+          {filtered.map((h) => {
+            const assignee = assignments[h.id] ?? "Unassigned";
+            return (
+              <button
+                key={h.id}
+                onClick={() => setSelectedId(h.id)}
+                className={cn(
+                  "flex w-full flex-col gap-1.5 border-b px-3 py-2.5 text-left transition hover:bg-muted/50",
+                  selectedId === h.id && "bg-primary/5",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium">{h.display_name}</span>
+                  <span className="ml-auto"><StatusPill value={h.kyc_status} /></span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Badge variant="outline" className="h-4 px-1.5 text-[10px] capitalize">{h.entity_type}</Badge>
+                  <span>{h.country}</span>
+                  <StatusPill value={h.risk_level} />
+                  <DaysWaitingBadge since={h.inserted_at} />
+                </div>
+                <div className={cn("text-[11px]", assignee === "Unassigned" ? "text-muted-foreground italic" : "text-foreground")}>
+                  {assignee === "Unassigned" ? "Unassigned" : `Assigned to ${assignee}`}
+                </div>
+              </button>
+            );
+          })}
           {filtered.length === 0 && (
             <div className="p-6 text-center text-xs text-muted-foreground">No matching holders.</div>
           )}
@@ -168,187 +171,62 @@ export default function OnboardingPage() {
       </div>
 
       {selected ? (
-        <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-          <HolderHits holderId={selected.id} />
-          <Card className="p-4">
-            <div className="flex items-start gap-3">
-              <div>
-                <div className="text-lg font-semibold">{selected.display_name}</div>
-                <div className="text-xs text-muted-foreground">{selected.legal_name} · {selected.country} · {selected.entity_type}</div>
-              </div>
-              <div className="ml-auto flex flex-col items-end gap-1.5">
-                <div className="flex items-center gap-1.5">
-                  <StatusPill value={selected.kyc_status} />
-                  <DaysWaitingBadge since={selected.inserted_at} />
-                </div>
-                <StatusPill value={selected.risk_level} />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-              <Label className="text-[11px] text-muted-foreground">Assigned to</Label>
-              {canReassign ? (
-                <Select
-                  value={assignments[selected.id] ?? "Unassigned"}
-                  onValueChange={(v) => {
-                    setAssignments((prev) => ({ ...prev, [selected.id]: v }));
-                    sonnerToast.success("Reassigned", { description: v });
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ONBOARDING_ASSIGNEES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-sm font-medium">{assignments[selected.id] ?? "Unassigned"}</span>
-              )}
-              <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setOpenCaseDialog(true)}>
-                <Briefcase className="h-3.5 w-3.5" /> Open case
-              </Button>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-[11px] text-muted-foreground">KYC status</Label>
-                <Select value={selected.kyc_status} onValueChange={(v) => handleHolderUpdate({ kyc_status: v as KycStatus })}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["not_started", "in_progress", "approved", "rejected", "on_hold"] as KycStatus[]).map((s) =>
-                      <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Risk level</Label>
-                <Select value={selected.risk_level} onValueChange={(v) => handleHolderUpdate({ risk_level: v as RiskLevel })}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["low", "medium", "high", "prohibited"] as RiskLevel[]).map((s) =>
-                      <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleHolderUpdate({ kyc_status: "approved" })}>
-                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleHolderUpdate({ kyc_status: "on_hold" })}>
-                <PauseCircle className="h-3.5 w-3.5" /> Hold
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleHolderUpdate({ kyc_status: "rejected" })}>
-                <ShieldX className="h-3.5 w-3.5" /> Reject
-              </Button>
-            </div>
-          </Card>
-
-          {checklists[selected.id] && (
-            <DocumentChecklist
-              holder={selected}
-              docs={checklists[selected.id]}
-              customerEmail={selected.email ?? ""}
-              onChange={(key, patch) => {
-                setChecklists((prev) => ({
-                  ...prev,
-                  [selected.id]: prev[selected.id].map((d) => (d.key === key ? { ...d, ...patch } : d)),
-                }));
-                if (patch.status) {
-                  sonnerToast.success(`Document ${patch.status}`, { description: key.replace(/_/g, " ") });
-                }
-              }}
-            />
-          )}
-
-          {checklists[selected.id] && (
-            <OnboardingDecision
-              allApproved={checklists[selected.id].every((d) => d.status === "approved")}
-              onApprove={() => handleHolderUpdate({ kyc_status: "approved" })}
-              onReject={(reason) => {
-                handleHolderUpdate({ kyc_status: "rejected" });
-                sonnerToast.success("Onboarding rejected", { description: reason });
-              }}
-              onRequestEdd={() => {
-                handleHolderUpdate({ kyc_status: "on_hold" });
-                sonnerToast.success("EDD requested", { description: "Escalated to enhanced due diligence." });
-              }}
-            />
-          )}
-
-          <CasesSection sourceId={selected.id} title="Cases for this holder" />
-
-          <Card className="p-4">
-            <div className="mb-3 text-sm font-medium">Outreach</div>
-            <OutreachTab
-              subjectType="account_holder"
-              subjectId={selected.id}
-              customerName={selected.display_name}
-              customerEmail={selected.email ?? ""}
-            />
-          </Card>
-
-          <OpenOnboardingCaseDialog
+        <div className="min-w-0 flex-1">
+          <OnboardingDetail
+            holder={selected}
+            kycs={kycs}
+            docs={docs}
+            allTransactions={allTransactions}
+            checklist={checklists[selected.id] ?? []}
+            onChecklistChange={(key, patch) => {
+              setChecklists((prev) => ({
+                ...prev,
+                [selected.id]: prev[selected.id].map((d) => (d.key === key ? { ...d, ...patch } : d)),
+              }));
+              if (patch.status) sonnerToast.success(`Document ${patch.status}`, { description: key.replace(/_/g, " ") });
+            }}
+            assignee={assignments[selected.id] ?? "Unassigned"}
+            onAssign={(v) => {
+              setAssignments((prev) => ({ ...prev, [selected.id]: v }));
+            }}
+            canReassign={canReassign}
+            onApprove={() => handleHolderUpdate({ kyc_status: "approved" })}
+            onReject={(reason) => {
+              handleHolderUpdate({ kyc_status: "rejected" });
+              sonnerToast.success("Onboarding rejected", { description: reason });
+            }}
+            onRequestEdd={() => {
+              handleHolderUpdate({ kyc_status: "on_hold" });
+              sonnerToast.success("EDD requested", { description: "Escalated to enhanced due diligence." });
+            }}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onOpenCase={() => setOpenCaseDialog(true)}
+            onOpenOutreach={() => setOutreachOpen(true)}
+            onOpenAssign={() => setAssignOpen(true)}
+          />
+          <CreateFlagDialog
             open={openCaseDialog}
             onOpenChange={setOpenCaseDialog}
-            holder={selected}
-            assignedTo={assignments[selected.id] ?? "Unassigned"}
+            transactionId={selected.id}
+            defaultTitle={`Onboarding review · ${selected.display_name}`}
           />
-
-          <Card className="p-0">
-            <div className="flex items-center justify-between border-b px-4 py-2.5">
-              <div className="text-sm font-medium">KYC requirements</div>
-              <span className="text-xs text-muted-foreground">{kycs.length} items</span>
-            </div>
-            {kycs.length === 0 ? (
-              <div className="px-4 py-8 text-center text-xs text-muted-foreground">No KYC requirements.</div>
-            ) : (
-              <ul>
-                {kycs.map((k) => (
-                  <li key={k.id} className="flex items-center gap-3 border-b px-4 py-2.5 last:border-b-0">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium capitalize">{k.requirement_type.replace(/_/g, " ")}</div>
-                      {k.notes && <div className="text-[11px] text-muted-foreground">{k.notes}</div>}
-                    </div>
-                    <Select value={k.status} onValueChange={(v) => handleKycUpdate(k.id, v as KycRequirementStatus)}>
-                      <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {KYC_REQ_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          <Card className="p-0">
-            <div className="flex items-center justify-between border-b px-4 py-2.5">
-              <div className="text-sm font-medium">Documents</div>
-              <AttachDocumentDialog
-                accountHolderId={selected.id}
-                onUploaded={(d, requirementId) => {
-                  setDocs((prev) => [d, ...prev]);
-                  if (requirementId) {
-                    updateKycRequirement(requirementId, { document_id: d.id, status: "submitted" })
-                      .then((next) => setKycs((prev) => prev.map((k) => (k.id === next.id ? next : k))));
-                  }
-                  toast({ title: "Document attached", description: `POST /api/documents` });
-                }}
-                requirements={kycs}
-              />
-            </div>
-            {docs.length === 0 ? (
-              <div className="px-4 py-8 text-center text-xs text-muted-foreground">No documents.</div>
-            ) : (
-              <ul>
-                {docs.map((d) => (
-                  <li key={d.id} className="flex items-center gap-3 border-b px-4 py-2.5 last:border-b-0 text-xs">
-                    <span className="font-medium">{d.filename}</span>
-                    <span className="text-muted-foreground">· {d.document_type}</span>
-                    <span className="ml-auto text-muted-foreground">{format(new Date(d.uploaded_at), "yyyy-MM-dd HH:mm")}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          <OutreachComposer
+            open={outreachOpen}
+            onOpenChange={setOutreachOpen}
+            subjectType="account_holder"
+            subjectId={selected.id}
+            customerName={selected.display_name}
+            customerEmail={selected.email ?? ""}
+            onSent={() => setActiveTab("outreach")}
+          />
+          <AssignDialog
+            open={assignOpen}
+            onOpenChange={setAssignOpen}
+            current={assignments[selected.id]}
+            resourceLabel={selected.display_name}
+            onAssign={(v) => setAssignments((prev) => ({ ...prev, [selected.id]: v }))}
+          />
         </div>
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -359,192 +237,161 @@ export default function OnboardingPage() {
   );
 }
 
-function AttachDocumentDialog({
-  accountHolderId, onUploaded, requirements,
-}: {
-  accountHolderId: string;
-  onUploaded: (d: DocumentResponse, requirementId?: string) => void;
-  requirements: KycRequirementResponse[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [filename, setFilename] = useState("");
-  const [docType, setDocType] = useState("proof_of_address");
-  const [requirementId, setRequirementId] = useState<string>("none");
-  const [submitting, setSubmitting] = useState(false);
-
-  const submit = async () => {
-    if (!filename.trim()) return;
-    setSubmitting(true);
-    try {
-      const created = await createDocument({
-        filename: filename.trim(),
-        document_type: docType,
-        account_holder_id: accountHolderId,
-        size_bytes: Math.floor(50_000 + Math.random() * 1_500_000),
-        mime_type: filename.endsWith(".png") ? "image/png" : "application/pdf",
-      });
-      onUploaded(created, requirementId === "none" ? undefined : requirementId);
-      setOpen(false);
-      setFilename("");
-      setRequirementId("none");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <Plus className="h-3.5 w-3.5" /> Attach document
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Attach document</DialogTitle>
-          <DialogDescription>POST /api/documents, then optionally link via PUT /api/kyc-requirements/&#123;id&#125;.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Filename</Label>
-            <Input value={filename} onChange={(e) => setFilename(e.target.value)} placeholder="e.g. articles_2026.pdf" className="mt-1" />
-          </div>
-          <div>
-            <Label>Document type</Label>
-            <Select value={docType} onValueChange={setDocType}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {["proof_of_address", "id_document", "incorporation", "ownership_chart", "bank_statement", "tax_id"].map((t) =>
-                  <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Link to KYC requirement (optional)</Label>
-            <Select value={requirementId} onValueChange={setRequirementId}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Don't link</SelectItem>
-                {requirements.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.requirement_type.replace(/_/g, " ")}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={!filename.trim() || submitting} className="gap-1.5">
-            <FileUp className="h-3.5 w-3.5" /> {submitting ? "Uploading…" : "Upload"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function HolderHits({ holderId }: { holderId: string }) {
-  const hits = useRuleHits("account_holder", holderId);
-  if (hits.length === 0) return null;
-  return (
-    <>
-      <RuleHitBanner hits={hits} />
-      <Card className="p-4">
-        <div className="mb-2 text-sm font-medium">Rule breaches ({hits.length})</div>
-        <RuleHitsTab hits={hits} />
-      </Card>
-    </>
-  );
-}
-
-function OpenOnboardingCaseDialog({
-  open, onOpenChange, holder, assignedTo,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
+interface DetailProps {
   holder: AccountHolderResponse;
-  assignedTo: string;
-}) {
-  const [priority, setPriority] = useState<CasePriority>("medium");
-  const [description, setDescription] = useState("");
-  const [due, setDue] = useState<Date | undefined>(() => new Date(Date.now() + 5 * 86_400_000));
-  const [assignee, setAssignee] = useState(assignedTo);
-
-  useEffect(() => { setAssignee(assignedTo); }, [assignedTo, open]);
-
-  const submit = async () => {
-    if (!description.trim() || !due) return;
-    await createCase({
-      type: "onboarding_review",
-      status: "open",
-      priority,
-      title: `Onboarding review · ${holder.display_name}`,
-      description: description.trim(),
-      source_id: holder.id,
-      source_type: "account_holder",
-      assigned_to: assignee,
-      due_date: due.toISOString(),
-    });
-    sonnerToast.success("Case opened", { description: `Onboarding review · ${holder.display_name}` });
-    setDescription("");
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Open onboarding case</DialogTitle>
-          <DialogDescription>Create a case linked to {holder.display_name}.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Priority</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as CasePriority)}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(["critical", "high", "medium", "low"] as CasePriority[]).map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Assign to</Label>
-              <Select value={assignee} onValueChange={setAssignee}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ONBOARDING_ASSIGNEES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Description</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What needs review?" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Due date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal", !due && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
-                  {due ? format(due, "yyyy-MM-dd") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={due} onSelect={setDue} initialFocus className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={!description.trim() || !due}>Open case</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  kycs: KycRequirementResponse[];
+  docs: DocumentResponse[];
+  allTransactions: TransactionResponse[];
+  checklist: ChecklistDoc[];
+  onChecklistChange: (key: string, patch: Partial<ChecklistDoc>) => void;
+  assignee: string;
+  onAssign: (v: string) => void;
+  canReassign: boolean;
+  onApprove: () => void;
+  onReject: (reason: string) => void;
+  onRequestEdd: () => void;
+  activeTab: string;
+  onTabChange: (id: string) => void;
+  onOpenCase: () => void;
+  onOpenOutreach: () => void;
+  onOpenAssign: () => void;
 }
 
+function OnboardingDetail({
+  holder, kycs, docs, checklist, onChecklistChange, assignee, onAssign,
+  canReassign, onApprove, onReject, onRequestEdd, activeTab, onTabChange,
+  onOpenCase, onOpenOutreach, onOpenAssign,
+}: DetailProps) {
+  const ruleHits = useRuleHits("account_holder", holder.id);
+  const allApproved = checklist.length > 0 && checklist.every((d) => d.status === "approved");
+
+  const tabs: DetailPanelTab[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      render: () => (
+        <>
+          <PanelSection title="Account holder">
+            <Field label="legal_name">{holder.legal_name}</Field>
+            <Field label="entity_type">{holder.entity_type}</Field>
+            <Field label="country">{holder.country}</Field>
+            <Field label="risk_level"><StatusPill value={holder.risk_level} /></Field>
+            <Field label="kyc_status"><StatusPill value={holder.kyc_status} /></Field>
+            <Field label="email">{holder.email ?? "—"}</Field>
+            <Field label="days_waiting"><DaysWaitingBadge since={holder.inserted_at} /></Field>
+            <Field label="assigned_to">
+              {canReassign ? (
+                <Select value={assignee} onValueChange={onAssign}>
+                  <SelectTrigger className="h-7 w-[180px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TEAM_MEMBERS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span>{assignee}</span>
+              )}
+            </Field>
+          </PanelSection>
+
+          <PanelSection title="Decision">
+            <OnboardingDecision
+              allApproved={allApproved}
+              onApprove={onApprove}
+              onReject={onReject}
+              onRequestEdd={onRequestEdd}
+            />
+          </PanelSection>
+        </>
+      ),
+    },
+    {
+      id: "documents",
+      label: "Documents",
+      render: () => (
+        checklist.length > 0 ? (
+          <DocumentChecklist
+            holder={holder}
+            docs={checklist}
+            customerEmail={holder.email ?? ""}
+            onChange={onChecklistChange}
+          />
+        ) : (
+          <div className="text-xs text-muted-foreground">No checklist available.</div>
+        )
+      ),
+    },
+    {
+      id: "kyc",
+      label: "KYC",
+      render: () => (
+        <>
+          <PanelSection title="KYC overview">
+            <Field label="kyc_status"><StatusPill value={holder.kyc_status} /></Field>
+            <Field label="risk_level"><StatusPill value={holder.risk_level} /></Field>
+            <Field label="pep_status">{holder.risk_level === "high" || holder.risk_level === "critical" ? "Potential PEP — review" : "Not flagged"}</Field>
+            <Field label="sanctions">
+              <StatusPill value={checklist.find((d) => d.key === "sanctions")?.status === "approved" ? "clear" : checklist.find((d) => d.key === "sanctions")?.status ?? "pending"} />
+            </Field>
+            <Field label="rationale">
+              {holder.risk_level === "critical" ? "Sanctioned jurisdiction exposure" :
+               holder.risk_level === "high" ? "Elevated risk geography or volume" :
+               holder.risk_level === "medium" ? "Standard monitoring" : "Low-risk profile"}
+            </Field>
+          </PanelSection>
+          <PanelSection title="Open KYC requirements">
+            {kycs.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No KYC requirements on file.</div>
+            ) : (
+              <ul className="-mx-3 -my-3">
+                {kycs.map((k) => (
+                  <li key={k.id} className="flex items-center gap-2 border-b px-3 py-2 text-xs last:border-b-0">
+                    <span className="font-medium capitalize">{k.requirement_type.replace(/_/g, " ")}</span>
+                    <span className="ml-auto"><StatusPill value={k.status} /></span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PanelSection>
+        </>
+      ),
+    },
+    {
+      id: "outreach",
+      label: "Outreach",
+      render: () => (
+        <OutreachTab
+          subjectType="account_holder"
+          subjectId={holder.id}
+          customerName={holder.display_name}
+          customerEmail={holder.email ?? ""}
+        />
+      ),
+    },
+    {
+      id: "cases",
+      label: "Cases",
+      render: () => <CasesSection sourceId={holder.id} title="Cases for this holder" />,
+    },
+  ];
+
+  return (
+    <DetailPanel
+      title={holder.legal_name}
+      statusValue={holder.kyc_status}
+      subtitle={
+        <span className="capitalize">
+          {holder.entity_type} · {holder.country} · Assigned to <span className="font-medium not-italic text-foreground">{assignee}</span>
+        </span>
+      }
+      actions={[
+        { id: "flag", label: "Create flag", icon: Flag, permission: "transaction.create_flag", onClick: onOpenCase },
+        { id: "outreach", label: "Request info", icon: Mail, permission: "transaction.outreach", onClick: onOpenOutreach },
+        { id: "assign", label: assignee === "Unassigned" ? "Assign" : assignee, icon: UserPlus, permission: "onboarding.approve", onClick: onOpenAssign },
+      ]}
+      banner={<RuleHitBanner hits={ruleHits} onView={() => onTabChange("kyc")} />}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
+    />
+  );
+}
