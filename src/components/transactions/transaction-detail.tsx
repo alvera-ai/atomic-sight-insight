@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Building2, FileText, Landmark, ShieldCheck, User } from "lucide-react";
+import { Building2, FileText, Flag, Landmark, Mail, ShieldCheck, User } from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -15,7 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import {
   getAccountHolder,
   getComplianceScreening,
@@ -46,6 +58,8 @@ import { StatusPill } from "@/components/status-pill";
 import { useRuleHits } from "@/hooks/use-rule-hits";
 import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
 import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
+import { usePermission } from "@/hooks/use-permission";
+
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
@@ -79,6 +93,15 @@ export function TransactionDetail({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const ruleHits = useRuleHits("transaction", tx.id);
+  const canUpdateStatus = usePermission("transaction.update_status");
+  const canCreateFlag = usePermission("transaction.create_flag");
+  const canOutreach = usePermission("transaction.outreach");
+  const isReadOnly = !canUpdateStatus && !canCreateFlag && !canOutreach;
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState("");
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [outreachSubject, setOutreachSubject] = useState("");
+  const [outreachBody, setOutreachBody] = useState("");
 
   useEffect(() => {
     setStatusDraft(tx.status ?? "pending");
