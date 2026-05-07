@@ -17,6 +17,7 @@ import {
   type OutreachSubjectType,
 } from "@/api/outreach";
 import { useAuth } from "@/contexts/auth-context";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 import { shortId } from "@/lib/money";
 
 interface OutreachComposerProps {
