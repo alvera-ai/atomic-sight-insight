@@ -177,7 +177,10 @@ export default function OnboardingPage() {
                 <div className="text-xs text-muted-foreground">{selected.legal_name} · {selected.country} · {selected.entity_type}</div>
               </div>
               <div className="ml-auto flex flex-col items-end gap-1.5">
-                <StatusPill value={selected.kyc_status} />
+                <div className="flex items-center gap-1.5">
+                  <StatusPill value={selected.kyc_status} />
+                  <DaysWaitingBadge since={selected.inserted_at} />
+                </div>
                 <StatusPill value={selected.risk_level} />
               </div>
             </div>
