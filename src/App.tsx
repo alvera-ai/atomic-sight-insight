@@ -9,6 +9,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import ReviewPage from "./pages/ReviewPage";
 import TalkToDataPage from "./pages/TalkToDataPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
+import RulesPage from "./pages/RulesPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import HealthPage from "./pages/HealthPage";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/review" element={<ReviewPage />} />
+            <Route path="/rules" element={<RulesPage />} />
             <Route path="/talk-to-data" element={<TalkToDataPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

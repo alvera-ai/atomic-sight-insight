@@ -8,6 +8,7 @@ import {
   HeartPulse,
   MessageSquareCode,
   Layers,
+  Scale,
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,6 +33,7 @@ const compliance = [
   { title: "Transactions 360°", url: "/transactions", icon: Activity },
   { title: "Onboarding queue", url: "/onboarding", icon: ClipboardList },
   { title: "Review queue", url: "/review", icon: ShieldAlert },
+  { title: "Rules", url: "/rules", icon: Scale },
   { title: "Talk to data", url: "/talk-to-data", icon: MessageSquareCode },
   { title: "Recommendations", url: "/recommendations", icon: Sparkles },
 ];

@@ -1,93 +1,191 @@
+# Rules Engine — v1
 
-# Alvera AtomicFi Ops — v1 (Shell + Transactions 360°)
+A declarative, in-browser rules engine that evaluates every transaction and account holder, surfaces breaches with a confidence score, and lets users author/test/promote rules through a sandbox → live → archived lifecycle.
 
-Build the app shell and the first Compliance screen end-to-end against mock data, with field names and operationIds taken directly from your `openapi_1.yaml`. Visual system mirrors the **Website and Reputation Management** project (AlignUI / Preline Pro: white surfaces, AlignUI orange `--primary: 18 89% 54%`, neutral grays, `--radius: 0.5rem`, full light + dark palette). Light is default; a sun/moon toggle lives in the top bar. Screens 2–7 are scaffolded as routes that render a "Coming next" placeholder.
+## Model
 
-## Layout shell
+```ts
+type RuleScope = "transaction" | "account_holder";
+type RuleStatus = "sandbox" | "live" | "archived";
+type RuleSeverity = "low" | "medium" | "high" | "critical";
+type RuleAction = "flag" | "review" | "block";
 
-- **Collapsible left sidebar** (shadcn `Sidebar`, `collapsible="icon"`):
-  - **Compliance**: Transactions 360°, Onboarding queue, Review queue, Talk to data, Recommendations
-  - **Engineer**: Integrations, Health
-  - Active route highlighted; collapses to icon strip; group containing the active route stays expanded.
-- **Role switcher** at top of sidebar — segmented Compliance / Engineer that controls which group expands by default. All routes remain accessible.
-- **Top bar**: tenant selector (mock dropdown), global search (cosmetic), notifications bell with mock badge, avatar menu, theme toggle.
-- **Floating Copilot button** (bottom-right, primary orange) opens a right-side drawer from any screen. The drawer is shared with screen 5 later; on screen 1 it's pre-scoped to the transactions table.
+type Operator =
+  | "eq" | "neq" | "in" | "not_in"
+  | "gt" | "gte" | "lt" | "lte"
+  | "between" | "contains" | "exists" | "matches_list";
 
-## Screen 1 — Transactions 360°
+interface Condition {
+  id: string;
+  field: string;        // e.g. "amount", "currency", "counterparty.status", "account_holder.risk_level"
+  operator: Operator;
+  value: unknown;
+  weight: number;       // 1–10, contributes to confidence
+}
 
-```text
-+-------------------------------------------------------------+
-| Filters: [status ▾] [type ▾] [date range] [amount] [Reset]  |
-| NL prompt:  [ Ask in plain English…              ] [Run]    |
-+-------------------------------------------------------------+
-| Transactions table  (TanStack)                              |
-|  id | type | status | amount | currency | settlement_date   |
-|  | account_holder | creditor_counterparty                   |
-|  …row click → opens right detail pane                       |
-+--------------------------------------------+----------------+
-                                             | Detail pane    |
-                                             | (tabs)         |
-                                             +----------------+
+interface ConditionGroup {
+  id: string;
+  combinator: "AND" | "OR";
+  conditions: (Condition | ConditionGroup)[];
+}
+
+interface Rule {
+  id: string;
+  name: string;
+  description: string;
+  scope: RuleScope;
+  status: RuleStatus;
+  severity: RuleSeverity;
+  action: RuleAction;
+  threshold: number;    // 0–1; hit only fires if confidence ≥ threshold
+  when: ConditionGroup;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  version: number;
+}
+
+interface RuleHit {
+  id: string;
+  rule_id: string;
+  rule_version: number;
+  rule_name: string;
+  severity: RuleSeverity;
+  action: RuleAction;
+  subject_type: RuleScope;
+  subject_id: string;
+  confidence: number;          // 0–1
+  matched_conditions: { field: string; operator: Operator; value: unknown; matched: boolean; weight: number }[];
+  evaluated_at: string;
+  mode: "live" | "sandbox";    // sandbox hits never affect production state
+}
 ```
 
-**Table columns** (TanStack Table, all from `TransactionResponse`): `id` (truncated + copy), `transaction_type` pill, `status` pill, `amount` formatted from minor units using `currency`, `settlement_date`, account holder name, creditor counterparty name, `uetr` (truncated). Sortable, paginated, row-select highlights and opens detail pane.
+**Confidence**: `sum(weight of matched leaf conditions) / sum(weight of all leaf conditions)`. AND/OR groups gate whether the rule "fires" at all (group must evaluate true), but the confidence reflects breadth of match. Predictable, explainable, no ML.
 
-**Filter bar** (client-side over mock data): `status` multi-select (the 6 enum values), `transaction_type` multi-select (the 6 enum values), date range over `settlement_date`, amount range, free-text search across `id`, `end_to_end_id`, `instruction_id`, `uetr`, `transaction_external_id`.
+## Engine
 
-**NL filter**: typing a prompt and pressing Run opens the Copilot drawer pre-populated with the prompt, streams the four tool steps (`search_tables` → `get_schema` → `get_related_tables` → `execute_query`), and on completion replaces the table contents with the returned rows. A "Clear NL filter" chip appears above the table.
+`src/lib/rules/engine.ts`:
+- `evaluate(rule, fact)` → `RuleHit | null`
+- `evaluateAll(rules, fact, mode)` → `RuleHit[]`
+- `buildFact(transaction)` and `buildFact(accountHolder)` resolvers that flatten linked entities (counterparty, holder, screening) into a dotted-path fact object so conditions can reference `creditor_counterparty.status`, `account_holder.risk_level`, `latest_screening.status`, etc.
 
-**Detail pane** (right side, ~40% width, tabs):
-- **Overview** — all `TransactionResponse` fields. Inline action: status `Select` that fires a mock `updateTransaction` (operationId `AtomicFiApi.TransactionController.update`, `PUT /api/transactions/{id}`) with optimistic update + toast.
-- **Account Holder** — linked `AccountHolder` card (`kyc_status`, `risk_level`, country) with a "View in Onboarding" link.
-- **Counterparties** — debtor + creditor cards (status pill); if a beneficial-owner chain exists, render as a vertical list with ownership %.
-- **KYC & Documents** — list of `KycRequirement` rows (status pills) + linked `Document` rows (filename, type, uploaded_at). Read-only in v1.
-- **Screening** — latest `ComplianceScreening` (via `compliance_screening_id`) plus any `SanctionsMatch` rows (name, list, score, `false_positive_qualifier`).
-- **Ledger** — `LedgerEntry` (via `ledger_entry_id`) and current `LedgerAccountBalance` for the affected accounts.
+Triggers (mock):
+- `listTransactions` / `getTransaction` → run live transaction rules, attach hits to result.
+- `updateTransaction`, `updateAccountHolder`, `updateKycRequirement` → re-evaluate, persist hits.
+- On rule save with `status: live` → backfill hits across the store.
 
-All tabs read from the same in-memory mock fixture so a selected row immediately populates everything.
+A `useRuleHits(subjectType, subjectId)` hook reads from an in-memory `hitStore` keyed by subject.
 
-## Copilot drawer (shared)
+## Rule lifecycle
 
-Right-side `Sheet`, full-height, ~480px wide:
+- **sandbox**: editable, runs only on demand in the sandbox screen, writes to a separate `sandboxHitStore`. Never appears on transaction/holder panes.
+- **live**: read-mostly (edits bump `version` and re-backfill), evaluated on every fact change, hits surface inline.
+- **archived**: hidden from evaluation, preserved for audit. Promote back via "Restore to sandbox".
 
-1. **Prompt input** (textarea + Run + recent prompts).
-2. **Tool-call stream** — each step is a collapsible card with tool name, JSON arguments, spinner → check, then result preview. Steps appear with ~400ms staggered fake latency (per your "streamed step list" choice).
-3. **Result table** — same TanStack table component, columns inferred from the mock `execute_query` payload.
-4. **Apply to view** button (screen 1 only) — pushes results into the main transactions table.
+Transitions: `sandbox → live` (Promote), `live → archived` (Archive), `archived → sandbox` (Restore). Each transition is a single action with a confirm dialog; no version branching in v1.
 
-No persistence; closing the drawer keeps the last run in memory until route change.
+## Screens
 
-## Mock data (`src/data/fixtures.ts`)
+### New: `/rules` (Compliance group, sidebar)
 
-Built directly from spec schemas so the rewire is a one-line swap:
-- ~40 `TransactionResponse` rows covering every `status` × `transaction_type` combination of interest, amounts in minor units, mixed currencies (USD/EUR/GBP), realistic UETRs/EndToEndIds.
-- ~15 `AccountHolder` (mixed `kyc_status`, `risk_level`).
-- ~10 `Counterparty` (some `blocked`, some with beneficial-owner chains).
-- ~5 `BeneficialOwner` chains.
-- A handful of `KycRequirement`, `Document`, `ComplianceScreening` + `SanctionsMatch`, `LedgerEntry`, `LedgerAccountBalance` rows linked to specific transactions so several rows demo every tab richly.
+```text
++--------------------------------------------------------------+
+| Tabs: [ Live (n) ] [ Sandbox (n) ] [ Archived (n) ]          |
+| [ + New rule ]   [ Search ]   [ Scope ▾ ] [ Severity ▾ ]     |
++--------------------------------------------------------------+
+| Rules table                                                  |
+|  name | scope | severity | action | hits (7d) | updated      |
+|   …row click → rule editor drawer                            |
++--------------------------------------------------------------+
+```
 
-A small NL→filter resolver in `src/lib/nlQuery.ts` recognises a few canned patterns ("blocked transactions over 10k last week", "transactions linked to sanctioned counterparties", "rejected card payments today") and returns a filtered subset; anything else falls back to substring match. Keeps the demo believable without an LLM call.
+**Rule editor drawer** (right Sheet, ~640px):
+- Header: name, status pill, Promote/Archive/Restore button.
+- Tabs:
+  1. **Definition** — visual condition builder (field picker driven by scope-specific schema, operator dropdown, value input typed by field, weight slider 1–10, AND/OR groups, nestable). "View JSON" toggle swaps to a read-only JSON view with copy button.
+  2. **Settings** — severity, action, threshold slider, tags, description.
+  3. **Sandbox** — slice picker (date range over `settlement_date`/`inserted_at`, status multi-select, optional sample cap) + Run button. Results: hit count, hit rate, confidence histogram, table of matched subjects with per-condition breakdown. "Compare vs live" toggle diffs hits against currently-live rules of the same scope.
+  4. **History** — version log (created, edited, promoted, archived) with diff of `when` between versions.
 
-## Routes
+### Modified: Transaction detail pane (Screen 1) and Onboarding holder pane (Screen 2)
 
-- `/` → redirect to `/transactions`
-- `/transactions` (screen 1, implemented)
-- `/onboarding`, `/review`, `/talk-to-data`, `/recommendations`, `/integrations`, `/health` — placeholder "Coming next" panel describing the screen's intent.
+- **Banner** at top of pane when any live hit has confidence ≥ 0.8 OR severity ∈ {high, critical}: red/amber strip with rule name, confidence, and "View" link.
+- **New "Rule hits" tab** (added to existing tabs): full list of live hits, each expandable to show every condition with matched/unmatched + weight contribution.
 
-## Technical details
+### Modified: Recommendations (Screen 6)
 
-- **Stack**: React + Vite + TS, Tailwind, shadcn/ui, react-router, lucide. Add **`@tanstack/react-table`** and **`recharts`** (recharts unused in v1 but installed to avoid a second build later).
-- **Theme tokens**: copy AlignUI HSL palette from the reference project into `src/index.css` for both `:root` and `.dark`. `tailwind.config.ts` already wires `hsl(var(--…))` semantics — no changes needed.
-- **Theme toggle**: tiny `useTheme` hook toggles the `dark` class on `<html>`. No persistence (per "no localStorage" rule); resets to light on reload.
-- **API layer** (`src/api/*.ts`), one file per resource, function names matching spec operationIds:
-  - `transactions.ts`: `listTransactions`, `getTransaction`, `updateTransaction` (→ `TransactionController.index|show|update`).
-  - `accountHolders.ts`, `counterparties.ts`, `beneficialOwners.ts`, `kycRequirements.ts`, `documents.ts`, `complianceScreenings.ts` (incl. `screenAccountHolder`, `screenCounterparty`, `screenBeneficialOwner`), `ledgerEntries.ts`, `ledgerAccountBalances.ts`, `apiInfo.ts`, `tenants.ts`, `apiKeys.ts`, `blocklistEntries.ts`. Most are stubs returning `[]` for v1; only the transaction/holder/counterparty/screening/document/ledger functions return real fixtures.
-  - Each returns a Promise with a small artificial delay so loading states render.
-  - The Claude rewire later swaps these to `@atomic-fi/sdk`.
-- **Types** (`src/api/types.ts`): mirror the spec schemas (`TransactionResponse`, `AccountHolderResponse`, `CounterpartyResponse`, `BeneficialOwnerResponse`, `KycRequirementResponse`, `DocumentResponse`, `ComplianceScreeningResponse`, `SanctionsMatchResponse`, `LedgerEntryResponse`, `LedgerAccountBalanceResponse`) with exact field names and enums from the YAML.
-- **Money formatting**: `formatAmount(minor: number, currency: string)` divides by the right number of fractional digits per ISO 4217 (USD/EUR/GBP = 2, JPY = 0). Lives in `src/lib/money.ts`.
-- **State**: component state + URL search params (selected transaction id, active filters). No global store. Copilot state in a `CopilotProvider` context so the floating button and screens share it.
+Add a new `kind: "create_rule_from_pattern"` recommendation that, when approved, opens the rule editor drawer pre-filled with conditions derived from the platform signal.
 
-## Out of scope (this pass)
+## Field schema (drives the visual builder)
 
-Screens 2–7 (placeholders only), real LLM calls, real SDK wiring, auth, persistence, payments, integrations agent runs, health metrics charts.
+`src/lib/rules/schema.ts` exports per-scope field metadata:
+
+```ts
+{
+  transaction: [
+    { path: "amount", label: "Amount (minor units)", type: "number" },
+    { path: "currency", label: "Currency", type: "enum", values: ["USD","EUR","GBP","JPY"] },
+    { path: "status", label: "Status", type: "enum", values: [...TransactionStatus] },
+    { path: "transaction_type", label: "Type", type: "enum", values: [...TransactionType] },
+    { path: "creditor_counterparty.status", label: "Creditor status", type: "enum", values: [...CounterpartyStatus] },
+    { path: "creditor_counterparty.country", label: "Creditor country", type: "country" },
+    { path: "account_holder.risk_level", label: "Holder risk", type: "enum", values: [...RiskLevel] },
+    { path: "account_holder.kyc_status", label: "Holder KYC", type: "enum", values: [...KycStatus] },
+    { path: "latest_screening.status", label: "Latest screening", type: "enum", values: [...ScreeningStatus] },
+  ],
+  account_holder: [
+    { path: "risk_level", type: "enum", ... },
+    { path: "kyc_status", type: "enum", ... },
+    { path: "country", type: "country" },
+    { path: "entity_type", type: "enum", values: ["individual","business"] },
+    { path: "open_kyc_requirements_count", type: "number" },
+    { path: "latest_screening.status", type: "enum", ... },
+  ]
+}
+```
+
+The builder reads this to render the right value control (number input, multi-select, country picker, etc.) and to validate.
+
+## Seed rules (so the demo lights up)
+
+Six live + two sandbox + one archived, e.g.:
+- "Transfer to blocked counterparty" (transaction, critical, block).
+- "High-risk holder over 10k USD" (transaction, high, review).
+- "Sanctioned creditor country" (transaction, high, review).
+- "Holder KYC not approved" (account_holder, medium, flag).
+- "PEP beneficial owner ≥ 25%" (account_holder, high, review).
+- "Card payment to suspended counterparty" (transaction, critical, block).
+- Sandbox: "Velocity > 5 transfers / 24h" (preview only).
+- Archived: "Legacy: any transfer over 100k" (superseded).
+
+## File layout
+
+```
+src/lib/rules/
+  engine.ts          # evaluate, evaluateAll, fact resolvers
+  schema.ts          # per-scope field metadata
+  fixtures.ts        # seed rules
+  store.ts           # in-memory rules + hit stores, subscribe API
+  backtest.ts        # slice picker + run-on-history
+src/api/rules.ts     # listRules, getRule, createRule, updateRule, promoteRule, archiveRule, runBacktest
+src/api/types.ts     # add Rule, RuleHit, Condition*, etc.
+src/pages/RulesPage.tsx
+src/components/rules/
+  rule-table.tsx
+  rule-editor-drawer.tsx
+  condition-builder.tsx
+  condition-row.tsx
+  rule-json-view.tsx
+  sandbox-runner.tsx
+  hit-explanation.tsx          # per-condition matched/unmatched breakdown
+  rule-hit-banner.tsx          # used on tx + holder panes
+  rule-hits-tab.tsx            # used on tx + holder panes
+```
+
+Wire `/rules` into `App.tsx` and `app-sidebar.tsx` (Compliance group, between Review and Talk to data).
+
+## Out of scope for v1
+
+Rule import/export, scheduled re-evaluation, multi-rule composite scoring, per-tenant rule overrides, real persistence (everything stays in-memory like the rest of the mock layer), approval workflow for promotion (single-click promote with confirm only).

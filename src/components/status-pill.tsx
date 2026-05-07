@@ -34,6 +34,19 @@ const STATUS_CLASSES: Record<string, string> = {
   // KYC requirement
   submitted: "bg-info/15 text-info border-info/20",
   waived: "bg-muted text-muted-foreground border-border",
+
+  // Rule lifecycle
+  live: "bg-success/15 text-success border-success/20",
+  sandbox: "bg-info/15 text-info border-info/20",
+  archived: "bg-muted text-muted-foreground border-border",
+
+  // Rule severity
+  critical: "bg-destructive/25 text-destructive border-destructive/30",
+  // (high, medium, low already defined above)
+
+  // Rule action
+  flag: "bg-warning/20 text-warning-foreground border-warning/30",
+  block: "bg-destructive/15 text-destructive border-destructive/20",
 };
 
 export function StatusPill({ value, className }: { value: string | null | undefined; className?: string }) {

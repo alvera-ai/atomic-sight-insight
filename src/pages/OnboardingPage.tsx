@@ -23,6 +23,9 @@ import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { shortId } from "@/lib/money";
+import { useRuleHits } from "@/hooks/use-rule-hits";
+import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
+import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
@@ -117,6 +120,7 @@ export default function OnboardingPage() {
 
       {selected ? (
         <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+          <HolderHits holderId={selected.id} />
           <Card className="p-4">
             <div className="flex items-start gap-3">
               <div>
@@ -311,5 +315,19 @@ function AttachDocumentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function HolderHits({ holderId }: { holderId: string }) {
+  const hits = useRuleHits("account_holder", holderId);
+  if (hits.length === 0) return null;
+  return (
+    <>
+      <RuleHitBanner hits={hits} />
+      <Card className="p-4">
+        <div className="mb-2 text-sm font-medium">Rule breaches ({hits.length})</div>
+        <RuleHitsTab hits={hits} />
+      </Card>
+    </>
   );
 }

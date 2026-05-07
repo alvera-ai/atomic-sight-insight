@@ -43,6 +43,9 @@ import type {
 } from "@/api/types";
 import { formatAmount, shortId } from "@/lib/money";
 import { StatusPill } from "@/components/status-pill";
+import { useRuleHits } from "@/hooks/use-rule-hits";
+import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
+import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
@@ -74,6 +77,8 @@ export function TransactionDetail({
   const [balances, setBalances] = useState<LedgerAccountBalanceResponse[]>([]);
   const [statusDraft, setStatusDraft] = useState<TransactionStatus>(tx.status ?? "pending");
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const ruleHits = useRuleHits("transaction", tx.id);
 
   useEffect(() => {
     setStatusDraft(tx.status ?? "pending");
@@ -129,24 +134,28 @@ export function TransactionDetail({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b p-4">
+      <div className="space-y-2 border-b p-4">
         <div className="text-[11px] font-mono text-muted-foreground">{shortId(tx.id, 14)}</div>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-lg font-semibold">{formatAmount(tx.amount, tx.currency)}</span>
           <StatusPill value={tx.status} />
         </div>
-        <div className="mt-1 text-xs text-muted-foreground capitalize">
+        <div className="text-xs text-muted-foreground capitalize">
           {tx.transaction_type.replace(/_/g, " ")} · {tx.settlement_date ?? tx.requested_execution_date ?? "—"}
         </div>
+        <RuleHitBanner hits={ruleHits} onView={() => setActiveTab("rules")} />
       </div>
 
-      <Tabs defaultValue="overview" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-4 mt-3 grid grid-cols-5">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="mx-4 mt-3 grid grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="holder">Holder</TabsTrigger>
           <TabsTrigger value="counterparty">Parties</TabsTrigger>
           <TabsTrigger value="kyc">KYC</TabsTrigger>
           <TabsTrigger value="screening">Screen</TabsTrigger>
+          <TabsTrigger value="rules" className="relative">
+            Rules{ruleHits.length > 0 && <span className="ml-1 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{ruleHits.length}</span>}
+          </TabsTrigger>
         </TabsList>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -331,6 +340,10 @@ export function TransactionDetail({
                 ))}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="rules" className="m-0">
+            <RuleHitsTab hits={ruleHits} />
           </TabsContent>
         </div>
       </Tabs>
