@@ -36,6 +36,7 @@ import { usePermission } from "@/hooks/use-permission";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
+const ONBOARDING_ASSIGNEES = ["Unassigned", "Ana Martins", "James Osei", "Priya Nair"];
 
 export default function OnboardingPage() {
   const [holders, setHolders] = useState<AccountHolderResponse[]>([]);
