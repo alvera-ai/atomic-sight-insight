@@ -13,6 +13,7 @@ import RulesPage from "./pages/RulesPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import HealthPage from "./pages/HealthPage";
 import NotFound from "./pages/NotFound";
+import { RouteGuard } from "@/components/auth/route-guard";
 
 const queryClient = new QueryClient();
 
@@ -24,15 +25,18 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/transactions" replace />} />
-            <Route path="/transactions" element={<TransactionsPage />} />
-            <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route path="/review" element={<ReviewPage />} />
-            <Route path="/rules" element={<RulesPage />} />
-            <Route path="/talk-to-data" element={<TalkToDataPage />} />
-            <Route path="/recommendations" element={<RecommendationsPage />} />
-            <Route path="/integrations" element={<IntegrationsPage />} />
-            <Route path="/health" element={<HealthPage />} />
+            <Route element={<RouteGuard />}>
+              <Route path="/" element={<Navigate to="/transactions" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/transactions" replace />} />
+              <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/review" element={<ReviewPage />} />
+              <Route path="/rules" element={<RulesPage />} />
+              <Route path="/talk-to-data" element={<TalkToDataPage />} />
+              <Route path="/recommendations" element={<RecommendationsPage />} />
+              <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/health" element={<HealthPage />} />
+            </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
