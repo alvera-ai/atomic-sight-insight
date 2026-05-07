@@ -53,7 +53,8 @@ export default function TransactionsPage() {
   useEffect(() => {
     listTransactions().then(setRows);
     listCases().then(setCases);
-    return subscribeCases(() => listCases().then(setCases));
+    const unsub = subscribeCases(() => listCases().then(setCases));
+    return () => { unsub(); };
   }, []);
 
   const flaggedTxIds = useMemo(() => {
