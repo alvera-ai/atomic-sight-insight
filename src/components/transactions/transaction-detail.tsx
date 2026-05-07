@@ -404,6 +404,15 @@ export function TransactionDetail({
           <TabsContent value="rules" className="m-0">
             <RuleHitsTab hits={ruleHits} />
           </TabsContent>
+
+          <TabsContent value="outreach" className="m-0">
+            <OutreachTab
+              subjectType="transaction"
+              subjectId={tx.id}
+              customerName={holder?.display_name ?? "Customer"}
+              customerEmail={holder?.email ?? ""}
+            />
+          </TabsContent>
         </div>
       </Tabs>
 
