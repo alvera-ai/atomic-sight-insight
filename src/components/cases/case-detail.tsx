@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { StatusPill } from "@/components/status-pill";
 import { useAuth } from "@/contexts/auth-context";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 import {
   ASSIGNEE_OPTIONS,
   addCaseNote,
@@ -63,6 +64,8 @@ export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () =>
       ? transactions.find((t) => t.id === value.source_id)?.id.slice(0, 10) ?? value.source_id.slice(0, 10)
       : accountHolders.find((h) => h.id === value.source_id)?.display_name ?? value.source_id.slice(0, 10);
 
+  const logAudit = useAuditLogger();
+
   const doStatus = async (s: CaseStatus) => {
     await updateCase(value.id, { status: s });
     toast.success("Status updated", { description: s.replace(/_/g, " ") });
@@ -71,6 +74,13 @@ export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () =>
 
   const doAssign = async (assignee: string) => {
     await updateCase(value.id, { assigned_to: assignee });
+    logAudit({
+      action_type: "case.assigned",
+      resource_type: "case",
+      resource_id: value.id,
+      description: `Assigned case '${value.title}' to ${assignee}`,
+      metadata: { assignee },
+    });
     toast.success("Reassigned", { description: assignee });
     onChanged();
   };
@@ -84,6 +94,13 @@ export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () =>
 
   const doClose = async () => {
     await updateCase(value.id, { status: "closed" });
+    logAudit({
+      action_type: "case.closed",
+      resource_type: "case",
+      resource_id: value.id,
+      description: `Closed case '${value.title}'`,
+      metadata: {},
+    });
     toast.success("Case closed");
     setConfirmClose(false);
     onChanged();
@@ -91,6 +108,13 @@ export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () =>
 
   const doEscalate = async () => {
     await updateCase(value.id, { status: "escalated", priority: "critical" });
+    logAudit({
+      action_type: "case.escalated",
+      resource_type: "case",
+      resource_id: value.id,
+      description: `Escalated case '${value.title}' to critical priority`,
+      metadata: { priority: "critical" },
+    });
     toast.success("Case escalated");
     setConfirmEsc(false);
     onChanged();

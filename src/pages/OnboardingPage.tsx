@@ -34,6 +34,7 @@ import { CasesSection } from "@/components/cases/cases-section";
 import { createCase, type CasePriority } from "@/api/cases";
 import { usePermission } from "@/hooks/use-permission";
 import { OutreachTab } from "@/components/outreach/outreach-tab";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
@@ -49,6 +50,7 @@ export default function OnboardingPage() {
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [openCaseDialog, setOpenCaseDialog] = useState(false);
   const canReassign = usePermission("onboarding.approve"); // officer + analyst
+  const logAudit = useAuditLogger();
 
   useEffect(() => {
     listAccountHolders().then((all) => {
@@ -77,6 +79,23 @@ export default function OnboardingPage() {
     if (!selected) return;
     const next = await updateAccountHolder(selected.id, patch);
     setHolders((prev) => prev.map((h) => (h.id === next.id ? next : h)));
+    if (patch.kyc_status === "approved") {
+      logAudit({
+        action_type: "onboarding.approved",
+        resource_type: "account_holder",
+        resource_id: next.id,
+        description: `Approved KYC for ${next.display_name}`,
+        metadata: {},
+      });
+    } else if (patch.kyc_status === "rejected") {
+      logAudit({
+        action_type: "onboarding.rejected",
+        resource_type: "account_holder",
+        resource_id: next.id,
+        description: `Rejected KYC for ${next.display_name}`,
+        metadata: {},
+      });
+    }
     toast({ title: "Account holder updated", description: `PUT /api/account-holders/${shortId(next.id, 6)}` });
   };
 

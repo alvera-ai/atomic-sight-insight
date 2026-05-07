@@ -9,6 +9,7 @@ export const NAV_ACCESS: Record<string, UserRole[]> = {
   "/rules": ["compliance_officer", "compliance_analyst", "rules_manager", "auditor"],
   "/talk-to-data": ["compliance_officer", "compliance_analyst", "rules_manager", "auditor"],
   "/recommendations": ["compliance_officer", "compliance_analyst", "rules_manager", "auditor"],
+  "/audit": ["compliance_officer", "auditor"],
   "/integrations": ["engineer"],
   "/health": ["engineer"],
 };

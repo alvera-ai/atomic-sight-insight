@@ -17,6 +17,7 @@ import {
   type OutreachSubjectType,
 } from "@/api/outreach";
 import { useAuth } from "@/contexts/auth-context";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 import { shortId } from "@/lib/money";
 
 interface OutreachComposerProps {
@@ -39,6 +40,7 @@ export function OutreachComposer({
   open, onOpenChange, subjectType, subjectId, customerName, customerEmail, onSent,
 }: OutreachComposerProps) {
   const { user } = useAuth();
+  const logAudit = useAuditLogger();
   const [templateId, setTemplateId] = useState<string>("additional_documentation");
   const [to, setTo] = useState(customerEmail);
   const [subject, setSubject] = useState("");
@@ -71,6 +73,13 @@ export function OutreachComposer({
         template: templateId,
         document_requests: docs,
         sent_by: user.name,
+      });
+      logAudit({
+        action_type: "outreach.sent",
+        resource_type: subjectType === "transaction" ? "transaction" : "account_holder",
+        resource_id: subjectId,
+        description: `Sent outreach '${subject.trim()}' to ${to.trim()}`,
+        metadata: { template: templateId, document_requests: docs },
       });
       sonnerToast.success("Outreach sent", { description: `To ${to.trim()}` });
       onSent?.();

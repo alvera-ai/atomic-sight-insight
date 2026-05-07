@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createCase, listCasesBySource, subscribeCases, type Case } from "@/api/cases";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 
 const FILTERS: Array<ScreeningStatus | "all"> = ["all", "match", "potential_match", "review", "clear"];
 
@@ -48,6 +49,7 @@ export default function ReviewPage() {
   const [assignDialogFor, setAssignDialogFor] = useState<ComplianceScreeningResponse | null>(null);
   const [assignTo, setAssignTo] = useState<string>(REVIEW_ASSIGNEES[0]);
   const [assignPriority, setAssignPriority] = useState<"critical" | "high" | "medium" | "low">("high");
+  const reviewLog = useAuditLogger();
 
   useEffect(() => {
     listComplianceScreenings().then((s) => {
@@ -80,7 +82,7 @@ export default function ReviewPage() {
   const submitAssign = async () => {
     if (!assignDialogFor) return;
     const s = assignDialogFor;
-    await createCase({
+    const created = await createCase({
       type: "sanctions_match",
       status: "open",
       priority: assignPriority,
@@ -90,6 +92,13 @@ export default function ReviewPage() {
       source_type: s.subject_type === "counterparty" ? "account_holder" : "account_holder",
       assigned_to: assignTo,
       due_date: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+    });
+    reviewLog({
+      action_type: "case.created",
+      resource_type: "case",
+      resource_id: created.id,
+      description: `Created sanctions match case for ${subjectLabel(s)} assigned to ${assignTo}`,
+      metadata: { type: "sanctions_match", screening_id: s.id },
     });
     sonnerToast.success("Case assigned", { description: `${subjectLabel(s)} → ${assignTo}` });
     setAssignDialogFor(null);
@@ -277,6 +286,7 @@ function FalsePositiveDialog({
   const [reviewer, setReviewer] = useState("alex.officer@alvera.ai");
   const [justification, setJustification] = useState("");
   const [saving, setSaving] = useState(false);
+  const logAudit = useAuditLogger();
 
   const submit = async () => {
     setSaving(true);
@@ -284,6 +294,13 @@ function FalsePositiveDialog({
       const nextMatch = await updateSanctionsMatch(match.id, { false_positive_qualifier: qualifier, reviewer, justification });
       const nextScreening = await updateComplianceScreening(screeningId, { status: "clear", reviewer });
       onSaved(nextMatch, nextScreening);
+      logAudit({
+        action_type: "screening.dispositioned",
+        resource_type: "screening",
+        resource_id: screeningId,
+        description: `Marked screening match as false positive (${qualifier.replace(/_/g, " ")})`,
+        metadata: { qualifier, match_id: match.id },
+      });
       toast({ title: "Marked false positive", description: `PUT /api/compliance-screenings/${screeningId.slice(0, 6)}` });
       setOpen(false);
     } finally {

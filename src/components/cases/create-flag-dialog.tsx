@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createCase, type CasePriority, type CaseType } from "@/api/cases";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 
 type FlagType = Extract<CaseType, "rule_breach" | "sanctions_match" | "transaction_flag">;
 
@@ -36,6 +37,7 @@ export function CreateFlagDialog({ open, onOpenChange, transactionId, defaultTit
   const [description, setDescription] = useState("");
   const [assignee, setAssignee] = useState<string>("Unassigned");
   const [due, setDue] = useState<Date | undefined>(() => new Date(Date.now() + 3 * 86_400_000));
+  const logAudit = useAuditLogger();
 
   const reset = () => {
     setType("transaction_flag");
@@ -47,16 +49,24 @@ export function CreateFlagDialog({ open, onOpenChange, transactionId, defaultTit
 
   const submit = async () => {
     if (!description.trim() || !due) return;
-    await createCase({
+    const title = defaultTitle ?? `Flagged transaction ${transactionId.slice(0, 8)}`;
+    const created = await createCase({
       type,
       status: "open",
       priority,
-      title: defaultTitle ?? `Flagged transaction ${transactionId.slice(0, 8)}`,
+      title,
       description: description.trim(),
       source_id: transactionId,
       source_type: "transaction",
       assigned_to: assignee,
       due_date: due.toISOString(),
+    });
+    logAudit({
+      action_type: "case.created",
+      resource_type: "case",
+      resource_id: created.id,
+      description: `Created case '${title}'`,
+      metadata: { type, priority },
     });
     toast.success("Flag created", { description: `Case opened · ${type.replace(/_/g, " ")}` });
     reset();
