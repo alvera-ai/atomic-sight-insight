@@ -241,6 +241,38 @@ export default function OnboardingPage() {
             </div>
           </Card>
 
+          {checklists[selected.id] && (
+            <DocumentChecklist
+              holder={selected}
+              docs={checklists[selected.id]}
+              customerEmail={selected.email ?? ""}
+              onChange={(key, patch) => {
+                setChecklists((prev) => ({
+                  ...prev,
+                  [selected.id]: prev[selected.id].map((d) => (d.key === key ? { ...d, ...patch } : d)),
+                }));
+                if (patch.status) {
+                  sonnerToast.success(`Document ${patch.status}`, { description: key.replace(/_/g, " ") });
+                }
+              }}
+            />
+          )}
+
+          {checklists[selected.id] && (
+            <OnboardingDecision
+              allApproved={checklists[selected.id].every((d) => d.status === "approved")}
+              onApprove={() => handleHolderUpdate({ kyc_status: "approved" })}
+              onReject={(reason) => {
+                handleHolderUpdate({ kyc_status: "rejected" });
+                sonnerToast.success("Onboarding rejected", { description: reason });
+              }}
+              onRequestEdd={() => {
+                handleHolderUpdate({ kyc_status: "on_hold" });
+                sonnerToast.success("EDD requested", { description: "Escalated to enhanced due diligence." });
+              }}
+            />
+          )}
+
           <CasesSection sourceId={selected.id} title="Cases for this holder" />
 
           <Card className="p-4">
