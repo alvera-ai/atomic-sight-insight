@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
-import { ConditionBuilder } from "@/components/rules/condition-builder";
+import { JdmGraphEditor } from "@/components/rules/jdm-graph-editor";
 import { SandboxRunner } from "@/components/rules/sandbox-runner";
 import { newGroup } from "@/lib/rules/engine";
+import { conditionTreeToJdm, emptyJdmGraph } from "@/lib/rules/jdm";
 import { archiveRule, createRule, deleteRule, promoteRule, restoreRule, saveRule } from "@/api/rules";
 import { toast } from "@/hooks/use-toast";
 
@@ -33,6 +34,7 @@ const emptyRule = (): Rule => ({
   action: "flag",
   threshold: 0.5,
   when: newGroup("AND"),
+  content: emptyJdmGraph(),
   tags: [],
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -84,7 +86,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-[640px]">
+      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-[1100px]">
         <SheetHeader className="space-y-2 border-b p-4">
           <div className="flex items-start gap-2">
             <Input
@@ -128,13 +130,19 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[11px]">Scope</Label>
-                  <Select value={draft.scope} onValueChange={(v) => update({ scope: v as RuleScope, when: newGroup("AND") })}>
+                  <Select
+                    value={draft.scope}
+                    onValueChange={(v) => update({ scope: v as RuleScope })}
+                  >
                     <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="transaction">Transaction</SelectItem>
                       <SelectItem value="account_holder">Account holder</SelectItem>
                     </SelectContent>
                   </Select>
+                  <div className="mt-1 text-[10px] text-muted-foreground">
+                    Logical scope. Input fields are arbitrary — declare any path in the decision table.
+                  </div>
                 </div>
                 <div className="flex items-end justify-end gap-2">
                   <Label className="text-[11px]">JSON view</Label>
@@ -145,19 +153,23 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
               {showJson ? (
                 <div className="space-y-2">
                   <Textarea
-                    readOnly
-                    value={JSON.stringify(draft.when, null, 2)}
-                    className="min-h-[280px] font-mono text-[11px]"
+                    value={JSON.stringify(draft.content ?? conditionTreeToJdm(draft.when, draft.name), null, 2)}
+                    onChange={(e) => {
+                      try { update({ content: JSON.parse(e.target.value) }); } catch { /* ignore */ }
+                    }}
+                    className="min-h-[420px] font-mono text-[11px]"
                   />
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigator.clipboard.writeText(JSON.stringify(draft.when, null, 2))}>
-                    <Copy className="h-3.5 w-3.5" /> Copy JSON
+                  <Button
+                    size="sm" variant="outline" className="gap-1.5"
+                    onClick={() => navigator.clipboard.writeText(JSON.stringify(draft.content ?? {}, null, 2))}
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copy JDM
                   </Button>
                 </div>
               ) : (
-                <ConditionBuilder
-                  scope={draft.scope}
-                  group={draft.when}
-                  onChange={(g) => update({ when: g })}
+                <JdmGraphEditor
+                  value={draft.content ?? conditionTreeToJdm(draft.when, draft.name)}
+                  onChange={(g) => update({ content: g })}
                 />
               )}
             </TabsContent>

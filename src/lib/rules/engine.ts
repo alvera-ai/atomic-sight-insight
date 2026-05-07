@@ -100,12 +100,18 @@ function evalGroup(node: RuleNode, fact: Record<string, unknown>): boolean {
     : node.children.some((c) => evalGroup(c, fact));
 }
 
+import { evaluateRuleJdm } from "@/lib/rules/jdm";
+
 export function evaluateRule(
   rule: Rule,
   fact: Record<string, unknown>,
   subjectId: string,
   mode: "live" | "sandbox" = "live",
 ): RuleHit | null {
+  // Prefer JDM graph when present
+  if (rule.content) return evaluateRuleJdm(rule, fact, subjectId, mode);
+
+  // Legacy condition-tree path
   const fired = evalGroup(rule.when, fact);
   const leaves = collectLeaves(rule.when);
   const matched: MatchedCondition[] = leaves.map((c) => ({

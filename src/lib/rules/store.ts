@@ -7,8 +7,13 @@ import {
   buildHolderFact, buildTransactionFact, evaluateRules, type FactSources,
 } from "@/lib/rules/engine";
 import { seedRules } from "@/lib/rules/fixtures";
+import { conditionTreeToJdm } from "@/lib/rules/jdm";
 
-let ruleStore: Rule[] = [...seedRules];
+// Auto-migrate any seed/legacy rule lacking a JDM graph.
+const ensureJdm = (r: Rule): Rule =>
+  r.content ? r : { ...r, content: conditionTreeToJdm(r.when, r.name) };
+
+let ruleStore: Rule[] = seedRules.map(ensureJdm);
 // hits keyed by `${scope}:${subjectId}` → live hits only
 let liveHits: Record<string, RuleHit[]> = {};
 const subscribers = new Set<() => void>();
@@ -45,8 +50,9 @@ recomputeAllLiveHits();
 export const getRules = () => [...ruleStore];
 export const getRule = (id: string) => ruleStore.find((r) => r.id === id);
 export const upsertRule = (rule: Rule) => {
-  const exists = ruleStore.some((r) => r.id === rule.id);
-  ruleStore = exists ? ruleStore.map((r) => (r.id === rule.id ? rule : r)) : [rule, ...ruleStore];
+  const next = ensureJdm(rule);
+  const exists = ruleStore.some((r) => r.id === next.id);
+  ruleStore = exists ? ruleStore.map((r) => (r.id === next.id ? next : r)) : [next, ...ruleStore];
   recomputeAllLiveHits();
 };
 export const removeRule = (id: string) => {

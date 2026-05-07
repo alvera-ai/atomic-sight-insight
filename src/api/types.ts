@@ -199,16 +199,63 @@ export interface RuleConditionGroup {
 
 export type RuleNode = RuleCondition | RuleConditionGroup;
 
+// ───── JDM (GoRules JSON Decision Model) — subset we author + evaluate locally
+export interface JdmInputField {
+  id: string;
+  field: string;     // dotted-path into fact, e.g. "amount"
+  name?: string;
+  type?: "string" | "number" | "boolean";
+}
+export interface JdmOutputField {
+  id: string;
+  field: string;     // output key, e.g. "matched"
+  name?: string;
+  type?: "string" | "number" | "boolean";
+}
+export interface JdmRule {
+  _id: string;
+  // keyed by input field id → cell expression (e.g. "> 100", '== "blocked"', "in [\"a\",\"b\"]", "")
+  // and by output field id → literal/expression
+  [k: string]: string;
+}
+export interface JdmDecisionTableContent {
+  hitPolicy: "first" | "collect";
+  inputs: JdmInputField[];
+  outputs: JdmOutputField[];
+  rules: JdmRule[];
+}
+export interface JdmNode {
+  id: string;
+  name?: string;
+  type: "inputNode" | "outputNode" | "decisionTableNode";
+  position?: { x: number; y: number };
+  content?: JdmDecisionTableContent;
+}
+export interface JdmEdge {
+  id: string;
+  sourceId: string;
+  targetId: string;
+}
+export interface JdmGraph {
+  nodes: JdmNode[];
+  edges: JdmEdge[];
+}
+
 export interface Rule {
   id: UUID;
   name: string;
   description: string;
-  scope: RuleScope;
+  scope: RuleScope;          // logical scope; with custom inputSchema this is informational
   status: RuleStatus;
   severity: RuleSeverity;
   action: RuleAction;
   threshold: number; // 0-1
+  /** Legacy condition tree — kept for back-compat. New rules use `content`. */
   when: RuleConditionGroup;
+  /** GoRules JDM graph — authoritative when present. */
+  content?: JdmGraph;
+  /** Optional custom input schema (generalized fact shape). */
+  inputSchema?: JdmInputField[];
   tags: string[];
   created_at: string;
   updated_at: string;
