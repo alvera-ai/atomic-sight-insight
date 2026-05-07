@@ -278,6 +278,7 @@ function FalsePositiveDialog({
   const [reviewer, setReviewer] = useState("alex.officer@alvera.ai");
   const [justification, setJustification] = useState("");
   const [saving, setSaving] = useState(false);
+  const logAudit = useAuditLogger();
 
   const submit = async () => {
     setSaving(true);
@@ -285,6 +286,13 @@ function FalsePositiveDialog({
       const nextMatch = await updateSanctionsMatch(match.id, { false_positive_qualifier: qualifier, reviewer, justification });
       const nextScreening = await updateComplianceScreening(screeningId, { status: "clear", reviewer });
       onSaved(nextMatch, nextScreening);
+      logAudit({
+        action_type: "screening.dispositioned",
+        resource_type: "screening",
+        resource_id: screeningId,
+        description: `Marked screening match as false positive (${qualifier.replace(/_/g, " ")})`,
+        metadata: { qualifier, match_id: match.id },
+      });
       toast({ title: "Marked false positive", description: `PUT /api/compliance-screenings/${screeningId.slice(0, 6)}` });
       setOpen(false);
     } finally {
