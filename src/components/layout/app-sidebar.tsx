@@ -11,6 +11,7 @@ import {
   Layers,
   Scale,
   LayoutDashboard,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
