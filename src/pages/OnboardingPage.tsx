@@ -33,6 +33,7 @@ import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { CasesSection } from "@/components/cases/cases-section";
 import { createCase, type CasePriority } from "@/api/cases";
 import { usePermission } from "@/hooks/use-permission";
+import { OutreachTab } from "@/components/outreach/outreach-tab";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
@@ -201,6 +202,16 @@ export default function OnboardingPage() {
           </Card>
 
           <CasesSection sourceId={selected.id} title="Cases for this holder" />
+
+          <Card className="p-4">
+            <div className="mb-3 text-sm font-medium">Outreach</div>
+            <OutreachTab
+              subjectType="account_holder"
+              subjectId={selected.id}
+              customerName={selected.display_name}
+              customerEmail={selected.email ?? ""}
+            />
+          </Card>
 
           <OpenOnboardingCaseDialog
             open={openCaseDialog}

@@ -61,6 +61,8 @@ import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { usePermission } from "@/hooks/use-permission";
 import { CreateFlagDialog } from "@/components/cases/create-flag-dialog";
 import { CasesSection } from "@/components/cases/cases-section";
+import { OutreachTab } from "@/components/outreach/outreach-tab";
+import { OutreachComposer } from "@/components/outreach/outreach-composer";
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
@@ -100,8 +102,6 @@ export function TransactionDetail({
   const isReadOnly = !canUpdateStatus && !canCreateFlag && !canOutreach;
   const [flagOpen, setFlagOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
-  const [outreachSubject, setOutreachSubject] = useState("");
-  const [outreachBody, setOutreachBody] = useState("");
 
   useEffect(() => {
     setStatusDraft(tx.status ?? "pending");
@@ -154,17 +154,6 @@ export function TransactionDetail({
     () => balances.filter((b) => b.currency === tx.currency).slice(0, 3),
     [balances, tx.currency],
   );
-
-
-  const handleSendOutreach = () => {
-    sonnerToast.success("Information request sent", {
-      description: holder?.email ? `To ${holder.email}` : "Email queued",
-    });
-    setOutreachSubject("");
-    setOutreachBody("");
-    setOutreachOpen(false);
-  };
-
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-2 border-b p-4">
@@ -197,7 +186,7 @@ export function TransactionDetail({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-4 mt-3 grid grid-cols-6">
+        <TabsList className="mx-4 mt-3 grid grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="holder">Holder</TabsTrigger>
           <TabsTrigger value="counterparty">Parties</TabsTrigger>
@@ -206,6 +195,7 @@ export function TransactionDetail({
           <TabsTrigger value="rules" className="relative">
             Rules{ruleHits.length > 0 && <span className="ml-1 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{ruleHits.length}</span>}
           </TabsTrigger>
+          <TabsTrigger value="outreach">Outreach</TabsTrigger>
         </TabsList>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -401,6 +391,15 @@ export function TransactionDetail({
           <TabsContent value="rules" className="m-0">
             <RuleHitsTab hits={ruleHits} />
           </TabsContent>
+
+          <TabsContent value="outreach" className="m-0">
+            <OutreachTab
+              subjectType="transaction"
+              subjectId={tx.id}
+              customerName={holder?.display_name ?? "Customer"}
+              customerEmail={holder?.email ?? ""}
+            />
+          </TabsContent>
         </div>
       </Tabs>
 
@@ -415,45 +414,15 @@ export function TransactionDetail({
         defaultTitle={`Transaction ${tx.id.slice(0, 8)} flagged`}
       />
 
-      <Dialog open={outreachOpen} onOpenChange={setOutreachOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Request information</DialogTitle>
-            <DialogDescription>Send an outreach email to the account holder.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="outreach-to">To</Label>
-              <Input id="outreach-to" value={holder?.email ?? ""} readOnly />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="outreach-subject">Subject</Label>
-              <Input
-                id="outreach-subject"
-                value={outreachSubject}
-                onChange={(e) => setOutreachSubject(e.target.value)}
-                placeholder="Additional information needed"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="outreach-body">Message</Label>
-              <Textarea
-                id="outreach-body"
-                value={outreachBody}
-                onChange={(e) => setOutreachBody(e.target.value)}
-                rows={5}
-                placeholder="Hello, we'd like to confirm a few details about a recent transaction…"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOutreachOpen(false)}>Cancel</Button>
-            <Button onClick={handleSendOutreach} disabled={!outreachSubject.trim() || !outreachBody.trim() || !holder?.email}>
-              Send
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OutreachComposer
+        open={outreachOpen}
+        onOpenChange={setOutreachOpen}
+        subjectType="transaction"
+        subjectId={tx.id}
+        customerName={holder?.display_name ?? "Customer"}
+        customerEmail={holder?.email ?? ""}
+        onSent={() => setActiveTab("outreach")}
+      />
     </div>
   );
 }
