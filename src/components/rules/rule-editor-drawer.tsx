@@ -69,6 +69,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   const { user } = useAuth();
+  const logAudit = useAuditLogger();
   const canCreate = usePermission("rule.create");
   const canPromote = usePermission("rule.promote");
   const canArchive = usePermission("rule.archive");
