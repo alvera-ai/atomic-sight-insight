@@ -120,7 +120,7 @@ export default function OnboardingPage() {
 
       {selected ? (
         <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-          <Card className="p-4">
+          <HolderHits holderId={selected.id} />
             <div className="flex items-start gap-3">
               <div>
                 <div className="text-lg font-semibold">{selected.display_name}</div>
