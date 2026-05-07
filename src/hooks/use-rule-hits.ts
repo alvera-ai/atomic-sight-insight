@@ -7,7 +7,8 @@ export function useRuleHits(scope: RuleScope, subjectId: string | undefined): Ru
   useEffect(() => {
     if (!subjectId) { setHits([]); return; }
     setHits(getLiveHits(scope, subjectId));
-    return subscribe(() => setHits(getLiveHits(scope, subjectId)));
+    const unsub = subscribe(() => setHits(getLiveHits(scope, subjectId)));
+    return () => { unsub; };
   }, [scope, subjectId]);
   return hits;
 }
