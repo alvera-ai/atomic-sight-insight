@@ -5,9 +5,11 @@ import { TopBar } from "@/components/layout/top-bar";
 import { CopilotFab } from "@/components/layout/copilot-fab";
 import { CopilotDrawer } from "@/components/copilot/copilot-drawer";
 import { CopilotProvider } from "@/contexts/copilot-context";
+import { AuthProvider } from "@/contexts/auth-context";
 
 export function AppLayout() {
   return (
+    <AuthProvider>
     <CopilotProvider>
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-muted/30">
