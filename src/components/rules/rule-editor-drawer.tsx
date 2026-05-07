@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
-import { ConditionBuilder } from "@/components/rules/condition-builder";
+import { JdmGraphEditor } from "@/components/rules/jdm-graph-editor";
 import { SandboxRunner } from "@/components/rules/sandbox-runner";
 import { newGroup } from "@/lib/rules/engine";
+import { conditionTreeToJdm, emptyJdmGraph } from "@/lib/rules/jdm";
 import { archiveRule, createRule, deleteRule, promoteRule, restoreRule, saveRule } from "@/api/rules";
 import { toast } from "@/hooks/use-toast";
 
@@ -33,6 +34,7 @@ const emptyRule = (): Rule => ({
   action: "flag",
   threshold: 0.5,
   when: newGroup("AND"),
+  content: emptyJdmGraph(),
   tags: [],
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
