@@ -261,6 +261,8 @@ export interface Rule {
   updated_at: string;
   created_by: string;
   version: number;
+  last_promoted_by?: string;
+  last_promoted_at?: string;
 }
 
 export interface MatchedCondition {
