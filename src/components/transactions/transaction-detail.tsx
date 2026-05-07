@@ -102,8 +102,6 @@ export function TransactionDetail({
   const isReadOnly = !canUpdateStatus && !canCreateFlag && !canOutreach;
   const [flagOpen, setFlagOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
-  const [outreachSubject, setOutreachSubject] = useState("");
-  const [outreachBody, setOutreachBody] = useState("");
 
   useEffect(() => {
     setStatusDraft(tx.status ?? "pending");
