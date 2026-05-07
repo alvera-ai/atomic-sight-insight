@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Flag, Mail, UserPlus } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Flag, Mail, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   listAccountHolders, listDocuments, listKycRequirements, listTransactions,
   updateAccountHolder,
