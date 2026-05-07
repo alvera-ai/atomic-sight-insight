@@ -62,6 +62,39 @@ export default function ReviewPage() {
     listSanctionsMatches(selectedId).then(setMatches);
   }, [selectedId]);
 
+  useEffect(() => {
+    let alive = true;
+    const refresh = async () => {
+      const allLists = await Promise.all(screenings.map((s) => listCasesBySource(s.subject_id)));
+      if (!alive) return;
+      setAllCases(allLists.flat());
+    };
+    refresh();
+    const unsub = subscribeCases(refresh);
+    return () => { alive = false; unsub(); };
+  }, [screenings]);
+
+  const caseForScreening = (s: ComplianceScreeningResponse) =>
+    allCases.find((c) => c.source_id === s.subject_id && c.type === "sanctions_match");
+
+  const submitAssign = async () => {
+    if (!assignDialogFor) return;
+    const s = assignDialogFor;
+    await createCase({
+      type: "sanctions_match",
+      status: "open",
+      priority: assignPriority,
+      title: `Sanctions match · ${subjectLabel(s)}`,
+      description: `Screening ${s.id.slice(0, 6)} from ${s.provider} returned status "${s.status}".`,
+      source_id: s.subject_id,
+      source_type: s.subject_type === "counterparty" ? "account_holder" : "account_holder",
+      assigned_to: assignTo,
+      due_date: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+    });
+    sonnerToast.success("Case assigned", { description: `${subjectLabel(s)} → ${assignTo}` });
+    setAssignDialogFor(null);
+  };
+
   const filtered = useMemo(
     () => (filter === "all" ? screenings : screenings.filter((s) => s.status === filter))
       .sort((a, b) => +new Date(b.screened_at) - +new Date(a.screened_at)),
