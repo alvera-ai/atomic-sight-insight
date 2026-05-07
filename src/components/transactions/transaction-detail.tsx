@@ -427,45 +427,15 @@ export function TransactionDetail({
         defaultTitle={`Transaction ${tx.id.slice(0, 8)} flagged`}
       />
 
-      <Dialog open={outreachOpen} onOpenChange={setOutreachOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Request information</DialogTitle>
-            <DialogDescription>Send an outreach email to the account holder.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="outreach-to">To</Label>
-              <Input id="outreach-to" value={holder?.email ?? ""} readOnly />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="outreach-subject">Subject</Label>
-              <Input
-                id="outreach-subject"
-                value={outreachSubject}
-                onChange={(e) => setOutreachSubject(e.target.value)}
-                placeholder="Additional information needed"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="outreach-body">Message</Label>
-              <Textarea
-                id="outreach-body"
-                value={outreachBody}
-                onChange={(e) => setOutreachBody(e.target.value)}
-                rows={5}
-                placeholder="Hello, we'd like to confirm a few details about a recent transaction…"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOutreachOpen(false)}>Cancel</Button>
-            <Button onClick={handleSendOutreach} disabled={!outreachSubject.trim() || !outreachBody.trim() || !holder?.email}>
-              Send
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OutreachComposer
+        open={outreachOpen}
+        onOpenChange={setOutreachOpen}
+        subjectType="transaction"
+        subjectId={tx.id}
+        customerName={holder?.display_name ?? "Customer"}
+        customerEmail={holder?.email ?? ""}
+        onSent={() => setActiveTab("outreach")}
+      />
     </div>
   );
 }
