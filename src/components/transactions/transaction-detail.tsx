@@ -59,6 +59,7 @@ import { useRuleHits } from "@/hooks/use-rule-hits";
 import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
 import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { usePermission } from "@/hooks/use-permission";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 import { CreateFlagDialog } from "@/components/cases/create-flag-dialog";
 import { CasesSection } from "@/components/cases/cases-section";
 import { OutreachTab } from "@/components/outreach/outreach-tab";
