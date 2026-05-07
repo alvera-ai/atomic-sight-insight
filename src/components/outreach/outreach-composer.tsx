@@ -31,8 +31,8 @@ interface OutreachComposerProps {
 
 function applyPlaceholders(text: string, customerName: string, subjectId: string) {
   return text
-    .replaceAll("[CUSTOMER_NAME]", customerName)
-    .replaceAll("[TRANSACTION_ID]", shortId(subjectId, 10));
+    .split("[CUSTOMER_NAME]").join(customerName)
+    .split("[TRANSACTION_ID]").join(shortId(subjectId, 10));
 }
 
 export function OutreachComposer({
