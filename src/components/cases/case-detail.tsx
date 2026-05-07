@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { StatusPill } from "@/components/status-pill";
 import { useAuth } from "@/contexts/auth-context";
+import { useAuditLogger } from "@/hooks/use-audit-logger";
 import {
   ASSIGNEE_OPTIONS,
   addCaseNote,
