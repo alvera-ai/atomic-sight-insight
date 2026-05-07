@@ -79,6 +79,23 @@ export default function OnboardingPage() {
     if (!selected) return;
     const next = await updateAccountHolder(selected.id, patch);
     setHolders((prev) => prev.map((h) => (h.id === next.id ? next : h)));
+    if (patch.kyc_status === "approved") {
+      logAudit({
+        action_type: "onboarding.approved",
+        resource_type: "account_holder",
+        resource_id: next.id,
+        description: `Approved KYC for ${next.display_name}`,
+        metadata: {},
+      });
+    } else if (patch.kyc_status === "rejected") {
+      logAudit({
+        action_type: "onboarding.rejected",
+        resource_type: "account_holder",
+        resource_id: next.id,
+        description: `Rejected KYC for ${next.display_name}`,
+        metadata: {},
+      });
+    }
     toast({ title: "Account holder updated", description: `PUT /api/account-holders/${shortId(next.id, 6)}` });
   };
 
