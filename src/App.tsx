@@ -9,6 +9,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import ReviewPage from "./pages/ReviewPage";
 import TalkToDataPage from "./pages/TalkToDataPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
+import RulesPage from "./pages/RulesPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import HealthPage from "./pages/HealthPage";
 import NotFound from "./pages/NotFound";
