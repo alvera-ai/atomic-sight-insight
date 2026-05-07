@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { JdmGraphEditor } from "@/components/rules/jdm-graph-editor";
 import { SandboxRunner } from "@/components/rules/sandbox-runner";
+import { BacktestTab } from "@/components/rules/backtest-tab";
 import { newGroup } from "@/lib/rules/engine";
 import { conditionTreeToJdm, emptyJdmGraph } from "@/lib/rules/jdm";
 import { archiveRule, createRule, deleteRule, promoteRule, restoreRule, saveRule } from "@/api/rules";
@@ -34,6 +35,7 @@ import { toast } from "@/hooks/use-toast";
 import { usePermission } from "@/hooks/use-permission";
 import { useAuth } from "@/contexts/auth-context";
 import { useAuditLogger } from "@/hooks/use-audit-logger";
+import { cn } from "@/lib/utils";
 
 const emptyRule = (): Rule => ({
   id: crypto.randomUUID(),
@@ -73,6 +75,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
   const canCreate = usePermission("rule.create");
   const canPromote = usePermission("rule.promote");
   const canArchive = usePermission("rule.archive");
+  const canBacktest = usePermission("rule.backtest");
   const canEdit = isNew ? canCreate : canCreate; // editing rules requires create permission
   const readOnly = !canEdit;
 
@@ -216,10 +219,11 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
         </SheetHeader>
 
         <Tabs defaultValue="definition" className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="mx-4 mt-3 grid w-auto grid-cols-3">
+          <TabsList className={cn("mx-4 mt-3 grid w-auto", canBacktest && !isNew ? "grid-cols-4" : "grid-cols-3")}>
             <TabsTrigger value="definition">Definition</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="sandbox">Sandbox</TabsTrigger>
+            {canBacktest && !isNew && <TabsTrigger value="backtest">Backtest</TabsTrigger>}
           </TabsList>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -314,6 +318,12 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
             <TabsContent value="sandbox" className="m-0">
               <SandboxRunner rule={draft} />
             </TabsContent>
+
+            {canBacktest && !isNew && (
+              <TabsContent value="backtest" className="m-0">
+                <BacktestTab rule={draft} onPromoted={() => { onChanged(); onOpenChange(false); }} />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </SheetContent>

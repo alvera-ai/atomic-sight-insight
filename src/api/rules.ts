@@ -97,3 +97,32 @@ export const runBacktest = async (rule: Rule, slice: BacktestSlice): Promise<Bac
 };
 
 export { getLiveHits, getAllLiveHits, subscribe };
+
+// ───── Backtest history (in-memory)
+export interface BacktestHistoryEntry {
+  id: string;
+  rule_id: string;
+  run_by: string;
+  run_at: string;
+  hit_rate: number;
+  hit_count: number;
+  total_evaluated: number;
+  from_date?: string;
+  to_date?: string;
+}
+
+const backtestHistory: BacktestHistoryEntry[] = [];
+
+export const recordBacktest = (entry: Omit<BacktestHistoryEntry, "id" | "run_at">): BacktestHistoryEntry => {
+  const created: BacktestHistoryEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    run_at: new Date().toISOString(),
+  };
+  backtestHistory.unshift(created);
+  return created;
+};
+
+export const listBacktestHistory = (ruleId: string, limit = 3): BacktestHistoryEntry[] =>
+  backtestHistory.filter((e) => e.rule_id === ruleId).slice(0, limit);
+
