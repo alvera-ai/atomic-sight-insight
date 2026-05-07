@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Building2, RefreshCcw, ShieldCheck, ShieldOff, User } from "lucide-react";
+import { Briefcase, Building2, RefreshCcw, ShieldCheck, ShieldOff, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,9 @@ import type {
 } from "@/api/types";
 import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { cn } from "@/lib/utils";
+import { createCase, listCasesBySource, subscribeCases, type Case } from "@/api/cases";
 
 const FILTERS: Array<ScreeningStatus | "all"> = ["all", "match", "potential_match", "review", "clear"];
 
