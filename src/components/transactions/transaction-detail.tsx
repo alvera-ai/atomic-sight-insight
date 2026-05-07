@@ -408,6 +408,70 @@ export function TransactionDetail({
           </TabsContent>
         </div>
       </Tabs>
+
+      <Dialog open={flagOpen} onOpenChange={setFlagOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create flag</DialogTitle>
+            <DialogDescription>Flag this transaction for further review.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="flag-reason">Flag reason</Label>
+            <Textarea
+              id="flag-reason"
+              placeholder="Describe why this transaction is being flagged…"
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFlagOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitFlag} disabled={!flagReason.trim()}>Submit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={outreachOpen} onOpenChange={setOutreachOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request information</DialogTitle>
+            <DialogDescription>Send an outreach email to the account holder.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="outreach-to">To</Label>
+              <Input id="outreach-to" value={holder?.email ?? ""} readOnly />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="outreach-subject">Subject</Label>
+              <Input
+                id="outreach-subject"
+                value={outreachSubject}
+                onChange={(e) => setOutreachSubject(e.target.value)}
+                placeholder="Additional information needed"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="outreach-body">Message</Label>
+              <Textarea
+                id="outreach-body"
+                value={outreachBody}
+                onChange={(e) => setOutreachBody(e.target.value)}
+                rows={5}
+                placeholder="Hello, we'd like to confirm a few details about a recent transaction…"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOutreachOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendOutreach} disabled={!outreachSubject.trim() || !outreachBody.trim() || !holder?.email}>
+              Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
