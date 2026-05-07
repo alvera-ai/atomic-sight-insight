@@ -16,11 +16,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   createDocument,
-  listAccountHolders, listDocuments, listKycRequirements,
+  listAccountHolders, listDocuments, listKycRequirements, listTransactions,
   updateAccountHolder, updateKycRequirement,
 } from "@/api";
 import type {
   AccountHolderResponse, DocumentResponse, KycRequirementResponse, KycRequirementStatus, KycStatus, RiskLevel,
+  TransactionResponse,
 } from "@/api/types";
 import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
@@ -35,6 +36,10 @@ import { createCase, type CasePriority } from "@/api/cases";
 import { usePermission } from "@/hooks/use-permission";
 import { OutreachTab } from "@/components/outreach/outreach-tab";
 import { useAuditLogger } from "@/hooks/use-audit-logger";
+import {
+  DaysWaitingBadge, DocumentChecklist, OnboardingDecision, type ChecklistDoc,
+} from "@/components/onboarding/document-checklist";
+import { seedChecklist } from "@/components/onboarding/checklist-seed";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
@@ -49,6 +54,8 @@ export default function OnboardingPage() {
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [openCaseDialog, setOpenCaseDialog] = useState(false);
+  const [allTransactions, setAllTransactions] = useState<TransactionResponse[]>([]);
+  const [checklists, setChecklists] = useState<Record<string, ChecklistDoc[]>>({});
   const canReassign = usePermission("onboarding.approve"); // officer + analyst
   const logAudit = useAuditLogger();
 
@@ -57,6 +64,7 @@ export default function OnboardingPage() {
       setHolders(all);
       if (!selectedId && all[0]) setSelectedId(all[0].id);
     });
+    listTransactions().then(setAllTransactions);
   }, []);
 
   useEffect(() => {
@@ -64,6 +72,16 @@ export default function OnboardingPage() {
     listKycRequirements(selectedId).then(setKycs);
     listDocuments(selectedId).then(setDocs);
   }, [selectedId]);
+
+  // Lazily seed checklist per holder once
+  useEffect(() => {
+    if (!selected || checklists[selected.id]) return;
+    const volume = allTransactions
+      .filter((t) => t.account_holder_id === selected.id)
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+    setChecklists((prev) => ({ ...prev, [selected.id]: seedChecklist(selected, volume) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, holders.length, allTransactions.length]);
 
   const filtered = useMemo(() => {
     return holders.filter((h) => {
@@ -159,7 +177,10 @@ export default function OnboardingPage() {
                 <div className="text-xs text-muted-foreground">{selected.legal_name} · {selected.country} · {selected.entity_type}</div>
               </div>
               <div className="ml-auto flex flex-col items-end gap-1.5">
-                <StatusPill value={selected.kyc_status} />
+                <div className="flex items-center gap-1.5">
+                  <StatusPill value={selected.kyc_status} />
+                  <DaysWaitingBadge since={selected.inserted_at} />
+                </div>
                 <StatusPill value={selected.risk_level} />
               </div>
             </div>
@@ -219,6 +240,38 @@ export default function OnboardingPage() {
               </Button>
             </div>
           </Card>
+
+          {checklists[selected.id] && (
+            <DocumentChecklist
+              holder={selected}
+              docs={checklists[selected.id]}
+              customerEmail={selected.email ?? ""}
+              onChange={(key, patch) => {
+                setChecklists((prev) => ({
+                  ...prev,
+                  [selected.id]: prev[selected.id].map((d) => (d.key === key ? { ...d, ...patch } : d)),
+                }));
+                if (patch.status) {
+                  sonnerToast.success(`Document ${patch.status}`, { description: key.replace(/_/g, " ") });
+                }
+              }}
+            />
+          )}
+
+          {checklists[selected.id] && (
+            <OnboardingDecision
+              allApproved={checklists[selected.id].every((d) => d.status === "approved")}
+              onApprove={() => handleHolderUpdate({ kyc_status: "approved" })}
+              onReject={(reason) => {
+                handleHolderUpdate({ kyc_status: "rejected" });
+                sonnerToast.success("Onboarding rejected", { description: reason });
+              }}
+              onRequestEdd={() => {
+                handleHolderUpdate({ kyc_status: "on_hold" });
+                sonnerToast.success("EDD requested", { description: "Escalated to enhanced due diligence." });
+              }}
+            />
+          )}
 
           <CasesSection sourceId={selected.id} title="Cases for this holder" />
 
