@@ -16,11 +16,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   createDocument,
-  listAccountHolders, listDocuments, listKycRequirements,
+  listAccountHolders, listDocuments, listKycRequirements, listTransactions,
   updateAccountHolder, updateKycRequirement,
 } from "@/api";
 import type {
   AccountHolderResponse, DocumentResponse, KycRequirementResponse, KycRequirementStatus, KycStatus, RiskLevel,
+  TransactionResponse,
 } from "@/api/types";
 import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
@@ -35,6 +36,10 @@ import { createCase, type CasePriority } from "@/api/cases";
 import { usePermission } from "@/hooks/use-permission";
 import { OutreachTab } from "@/components/outreach/outreach-tab";
 import { useAuditLogger } from "@/hooks/use-audit-logger";
+import {
+  DaysWaitingBadge, DocumentChecklist, OnboardingDecision, type ChecklistDoc,
+} from "@/components/onboarding/document-checklist";
+import { seedChecklist } from "@/components/onboarding/checklist-seed";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
