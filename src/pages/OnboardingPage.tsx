@@ -203,6 +203,16 @@ export default function OnboardingPage() {
 
           <CasesSection sourceId={selected.id} title="Cases for this holder" />
 
+          <Card className="p-4">
+            <div className="mb-3 text-sm font-medium">Outreach</div>
+            <OutreachTab
+              subjectType="account_holder"
+              subjectId={selected.id}
+              customerName={selected.display_name}
+              customerEmail={selected.email ?? ""}
+            />
+          </Card>
+
           <OpenOnboardingCaseDialog
             open={openCaseDialog}
             onOpenChange={setOpenCaseDialog}
