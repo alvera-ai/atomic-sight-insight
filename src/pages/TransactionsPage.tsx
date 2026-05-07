@@ -161,6 +161,9 @@ export default function TransactionsPage() {
   };
 
   const resetFilters = () => {
+    setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setFlaggedOnly(false);
+  };
+  // remove duplicated reset
     setSearch(""); setStatusFilter("all"); setTypeFilter("all");
   };
 
