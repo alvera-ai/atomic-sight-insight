@@ -50,8 +50,9 @@ recomputeAllLiveHits();
 export const getRules = () => [...ruleStore];
 export const getRule = (id: string) => ruleStore.find((r) => r.id === id);
 export const upsertRule = (rule: Rule) => {
-  const exists = ruleStore.some((r) => r.id === rule.id);
-  ruleStore = exists ? ruleStore.map((r) => (r.id === rule.id ? rule : r)) : [rule, ...ruleStore];
+  const next = ensureJdm(rule);
+  const exists = ruleStore.some((r) => r.id === next.id);
+  ruleStore = exists ? ruleStore.map((r) => (r.id === next.id ? next : r)) : [next, ...ruleStore];
   recomputeAllLiveHits();
 };
 export const removeRule = (id: string) => {
