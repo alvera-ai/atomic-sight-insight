@@ -42,9 +42,9 @@ export const RESOURCE_TYPES: AuditResourceType[] = ["rule", "transaction", "case
 export const RESOURCE_ROUTE: Record<AuditResourceType, string> = {
   rule: "/rules",
   transaction: "/transactions",
-  case: "/cases",
-  account_holder: "/onboarding",
-  screening: "/review",
+  case: "/queue",
+  account_holder: "/customers",
+  screening: "/queue?tab=sanctions",
 };
 
 const daysAgo = (n: number, h = 0) =>

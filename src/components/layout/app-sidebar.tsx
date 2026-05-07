@@ -1,17 +1,13 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Activity,
-  Briefcase,
-  ClipboardList,
-  Sparkles,
-  ShieldAlert,
+  Inbox,
+  Users,
   PlugZap,
   HeartPulse,
-  MessageSquareCode,
   Layers,
   Scale,
   LayoutDashboard,
-  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,14 +33,10 @@ type Role = "compliance" | "engineer";
 
 const compliance = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Transactions 360°", url: "/transactions", icon: Activity },
-  { title: "Onboarding queue", url: "/onboarding", icon: ClipboardList },
-  { title: "Cases", url: "/cases", icon: Briefcase },
-  { title: "Review queue", url: "/review", icon: ShieldAlert },
+  { title: "Work queue", url: "/queue", icon: Inbox },
+  { title: "Customers", url: "/customers", icon: Users },
+  { title: "Transactions", url: "/transactions", icon: Activity },
   { title: "Rules", url: "/rules", icon: Scale },
-  { title: "Talk to data", url: "/talk-to-data", icon: MessageSquareCode },
-  { title: "Recommendations", url: "/recommendations", icon: Sparkles },
-  { title: "Audit log", url: "/audit", icon: ShieldCheck },
 ];
 
 const engineer = [

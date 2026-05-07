@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listTransactions } from "@/api";
+import { getAllLiveHits } from "@/api/rules";
+import { listCases, subscribeCases, type Case } from "@/api/cases";
 import type { TransactionResponse, TransactionStatus, TransactionType } from "@/api/types";
 import { accountHolders, counterparties } from "@/data/fixtures";
 import { formatAmount, shortId } from "@/lib/money";
@@ -44,11 +46,27 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<TransactionType | "all">("all");
   const [sorting, setSorting] = useState<SortingState>([{ id: "inserted_at", desc: true }]);
   const [nlPrompt, setNlPrompt] = useState("");
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [cases, setCases] = useState<Case[]>([]);
   const c = useCopilot();
 
   useEffect(() => {
     listTransactions().then(setRows);
+    listCases().then(setCases);
+    const unsub = subscribeCases(() => listCases().then(setCases));
+    return () => { unsub(); };
   }, []);
+
+  const flaggedTxIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const cs of cases) {
+      if (cs.source_type === "transaction" && cs.status !== "closed") ids.add(cs.source_id);
+    }
+    for (const h of getAllLiveHits()) {
+      if (h.scope === "transaction") ids.add(h.subject_id);
+    }
+    return ids;
+  }, [cases, rows]);
 
   const sourceRows = c.appliedRows ?? rows;
 
@@ -57,6 +75,7 @@ export default function TransactionsPage() {
     return sourceRows.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (typeFilter !== "all" && t.transaction_type !== typeFilter) return false;
+      if (flaggedOnly && !flaggedTxIds.has(t.id)) return false;
       if (s) {
         const blob = [t.id, t.uetr, t.end_to_end_id, t.instruction_id, t.transaction_external_id]
           .filter(Boolean)
@@ -65,7 +84,7 @@ export default function TransactionsPage() {
       }
       return true;
     });
-  }, [sourceRows, search, statusFilter, typeFilter]);
+  }, [sourceRows, search, statusFilter, typeFilter, flaggedOnly, flaggedTxIds]);
 
   const columns = useMemo<ColumnDef<TransactionResponse>[]>(() => [
     {
@@ -142,7 +161,7 @@ export default function TransactionsPage() {
   };
 
   const resetFilters = () => {
-    setSearch(""); setStatusFilter("all"); setTypeFilter("all");
+    setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setFlaggedOnly(false);
   };
 
   const handleUpdated = (next: TransactionResponse) => {
@@ -154,7 +173,9 @@ export default function TransactionsPage() {
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Transactions 360°</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {flaggedOnly ? "Transactions — flagged only" : "Transactions"}
+            </h1>
             <p className="text-xs text-muted-foreground">{filteredRows.length} of {sourceRows.length} transactions</p>
           </div>
         </div>
@@ -181,6 +202,19 @@ export default function TransactionsPage() {
                 {TYPES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setFlaggedOnly((v) => !v)}
+              className={cn(
+                "h-9 rounded-full border px-3 text-xs font-medium transition",
+                flaggedOnly
+                  ? "border-warning bg-warning text-warning-foreground hover:bg-warning/90"
+                  : "border-border bg-transparent text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Flagged{flaggedOnly ? "" : ` · ${flaggedTxIds.size}`}
+            </Button>
             <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5">
               <RotateCcw className="h-3.5 w-3.5" /> Reset
             </Button>

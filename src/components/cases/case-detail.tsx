@@ -33,7 +33,7 @@ const PRIORITY_TONE: Record<string, string> = {
 
 const ALL_STATUSES: CaseStatus[] = ["open", "in_progress", "pending_customer", "escalated", "closed"];
 
-export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () => void }) {
+export function CaseDetail({ value, onChanged, extraActions }: { value: Case; onChanged: () => void; extraActions?: React.ReactNode }) {
   const { user } = useAuth();
   const role = user.role;
   const [note, setNote] = useState("");
@@ -58,7 +58,7 @@ export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () =>
   const canChangeStatus = allowedStatuses.length > 1;
 
   const sourceHref =
-    value.source_type === "transaction" ? `/transactions?focus=${value.source_id}` : `/onboarding?focus=${value.source_id}`;
+    value.source_type === "transaction" ? `/transactions?focus=${value.source_id}` : `/customers?focus=${value.source_id}`;
   const sourceLabel =
     value.source_type === "transaction"
       ? transactions.find((t) => t.id === value.source_id)?.id.slice(0, 10) ?? value.source_id.slice(0, 10)
@@ -202,6 +202,7 @@ export function CaseDetail({ value, onChanged }: { value: Case; onChanged: () =>
               </Button>
             </div>
           )}
+          {extraActions && <div className="border-t pt-3">{extraActions}</div>}
         </div>
 
         <div className="rounded-md border bg-card">

@@ -1,16 +1,78 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 import type { Rule, RuleStatus } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusPill } from "@/components/status-pill";
 import { listRules, getAllLiveHits, subscribe } from "@/api/rules";
 import { RuleEditorDrawer } from "@/components/rules/rule-editor-drawer";
 import { RoleGate } from "@/components/auth/role-gate";
+import { usePermission } from "@/hooks/use-permission";
+import TalkToDataPage from "@/pages/TalkToDataPage";
+import RecommendationsPage from "@/pages/RecommendationsPage";
+import AuditPage from "@/pages/AuditPage";
+
+type RulesTabId = "rules" | "intelligence" | "recommendations" | "audit";
+
+const TAB_PERMS: Record<RulesTabId, string> = {
+  rules: "rule.view",
+  intelligence: "talk_to_data.access",
+  recommendations: "recommendations.approve",
+  audit: "audit.view",
+};
 
 export default function RulesPage() {
+  const [params, setParams] = useSearchParams();
+  const canRules = usePermission("rule.view");
+  const canIntel = usePermission("talk_to_data.access");
+  const canRecs = usePermission("recommendations.approve");
+  const canAudit = usePermission("audit.view");
+
+  const availableTabs: RulesTabId[] = useMemo(() => {
+    const out: RulesTabId[] = [];
+    if (canRules) out.push("rules");
+    if (canIntel) out.push("intelligence");
+    if (canRecs) out.push("recommendations");
+    if (canAudit) out.push("audit");
+    return out;
+  }, [canRules, canIntel, canRecs, canAudit]);
+
+  const requested = (params.get("tab") as RulesTabId) || "rules";
+  const tab: RulesTabId = availableTabs.includes(requested) ? requested : (availableTabs[0] ?? "rules");
+
+  const setTab = (t: string) => {
+    const next = new URLSearchParams(params);
+    if (t === "rules") next.delete("tab");
+    else next.set("tab", t);
+    setParams(next, { replace: true });
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b px-4 pt-3">
+          <TabsList>
+            {availableTabs.includes("rules") && <TabsTrigger value="rules">Rules</TabsTrigger>}
+            {availableTabs.includes("intelligence") && <TabsTrigger value="intelligence">Intelligence</TabsTrigger>}
+            {availableTabs.includes("recommendations") && <TabsTrigger value="recommendations">Recommendations</TabsTrigger>}
+            {availableTabs.includes("audit") && <TabsTrigger value="audit">Audit log</TabsTrigger>}
+          </TabsList>
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {tab === "rules" && <RulesTab />}
+          {tab === "intelligence" && <div className="h-full overflow-y-auto"><TalkToDataPage /></div>}
+          {tab === "recommendations" && <div className="h-full overflow-y-auto"><RecommendationsPage /></div>}
+          {tab === "audit" && <div className="h-full overflow-y-auto"><AuditPage /></div>}
+        </div>
+      </Tabs>
+    </div>
+  );
+}
+
+function RulesTab() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [tab, setTab] = useState<RuleStatus>("live");
   const [search, setSearch] = useState("");
