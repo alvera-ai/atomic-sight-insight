@@ -92,9 +92,23 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
     try {
       if (isNew) {
         await createRule({ ...draft });
+        logAudit({
+          action_type: "rule.created",
+          resource_type: "rule",
+          resource_id: draft.id,
+          description: `Created rule '${draft.name}'`,
+          metadata: { status: draft.status },
+        });
         toast({ title: "Rule created", description: `POST /rules · status: ${draft.status}` });
       } else {
         await saveRule(draft);
+        logAudit({
+          action_type: "rule.edited",
+          resource_type: "rule",
+          resource_id: draft.id,
+          description: `Edited rule '${draft.name}'`,
+          metadata: {},
+        });
         toast({ title: "Rule saved", description: `PUT /rules/${draft.id.slice(0, 6)}` });
       }
       onChanged(); onOpenChange(false);
@@ -103,12 +117,26 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
 
   const doPromote = async () => {
     await promoteRule(draft.id, user.name);
+    logAudit({
+      action_type: "rule.promoted",
+      resource_type: "rule",
+      resource_id: draft.id,
+      description: `Promoted rule '${draft.name}' from Sandbox to Live`,
+      metadata: { from: "sandbox", to: "live" },
+    });
     toast({ title: "Promoted to live", description: `By ${user.name}` });
     setConfirmPromote(false);
     onChanged(); onOpenChange(false);
   };
   const doArchive = async () => {
     await archiveRule(draft.id);
+    logAudit({
+      action_type: "rule.archived",
+      resource_type: "rule",
+      resource_id: draft.id,
+      description: `Archived rule '${draft.name}'`,
+      metadata: {},
+    });
     toast({ title: "Archived" });
     setConfirmArchive(false);
     onChanged(); onOpenChange(false);
