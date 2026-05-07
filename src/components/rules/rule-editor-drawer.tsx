@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { Archive, Copy, Rocket, RotateCcw, Save, Trash2 } from "lucide-react";
 import type { Rule, RuleAction, RuleScope, RuleSeverity } from "@/api/types";
 import {
@@ -7,6 +8,13 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +31,8 @@ import { newGroup } from "@/lib/rules/engine";
 import { conditionTreeToJdm, emptyJdmGraph } from "@/lib/rules/jdm";
 import { archiveRule, createRule, deleteRule, promoteRule, restoreRule, saveRule } from "@/api/rules";
 import { toast } from "@/hooks/use-toast";
+import { usePermission } from "@/hooks/use-permission";
+import { useAuth } from "@/contexts/auth-context";
 
 const emptyRule = (): Rule => ({
   id: crypto.randomUUID(),
