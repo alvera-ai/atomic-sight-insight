@@ -74,6 +74,7 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
   const canCreate = usePermission("rule.create");
   const canPromote = usePermission("rule.promote");
   const canArchive = usePermission("rule.archive");
+  const canBacktest = usePermission("rule.backtest");
   const canEdit = isNew ? canCreate : canCreate; // editing rules requires create permission
   const readOnly = !canEdit;
 
