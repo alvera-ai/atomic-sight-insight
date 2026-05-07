@@ -318,6 +318,12 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
             <TabsContent value="sandbox" className="m-0">
               <SandboxRunner rule={draft} />
             </TabsContent>
+
+            {canBacktest && !isNew && (
+              <TabsContent value="backtest" className="m-0">
+                <BacktestTab rule={draft} onPromoted={() => { onChanged(); onOpenChange(false); }} />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </SheetContent>
