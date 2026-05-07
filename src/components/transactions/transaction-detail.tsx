@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Building2, FileText, Landmark, ShieldCheck, User } from "lucide-react";
+import { Building2, FileText, Flag, Landmark, Mail, ShieldCheck, User } from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -15,7 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import {
   getAccountHolder,
   getComplianceScreening,
@@ -46,6 +58,8 @@ import { StatusPill } from "@/components/status-pill";
 import { useRuleHits } from "@/hooks/use-rule-hits";
 import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
 import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
+import { usePermission } from "@/hooks/use-permission";
+
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
@@ -79,6 +93,15 @@ export function TransactionDetail({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const ruleHits = useRuleHits("transaction", tx.id);
+  const canUpdateStatus = usePermission("transaction.update_status");
+  const canCreateFlag = usePermission("transaction.create_flag");
+  const canOutreach = usePermission("transaction.outreach");
+  const isReadOnly = !canUpdateStatus && !canCreateFlag && !canOutreach;
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState("");
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [outreachSubject, setOutreachSubject] = useState("");
+  const [outreachBody, setOutreachBody] = useState("");
 
   useEffect(() => {
     setStatusDraft(tx.status ?? "pending");
@@ -132,17 +155,49 @@ export function TransactionDetail({
     [balances, tx.currency],
   );
 
+  const handleSubmitFlag = () => {
+    sonnerToast.success("Flag created", { description: flagReason || "No reason provided" });
+    setFlagReason("");
+    setFlagOpen(false);
+  };
+
+  const handleSendOutreach = () => {
+    sonnerToast.success("Information request sent", {
+      description: holder?.email ? `To ${holder.email}` : "Email queued",
+    });
+    setOutreachSubject("");
+    setOutreachBody("");
+    setOutreachOpen(false);
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-2 border-b p-4">
         <div className="text-[11px] font-mono text-muted-foreground">{shortId(tx.id, 14)}</div>
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <span className="text-lg font-semibold">{formatAmount(tx.amount, tx.currency)}</span>
           <StatusPill value={tx.status} />
+          <div className="ml-auto flex items-center gap-1.5">
+            {canCreateFlag && (
+              <Button size="sm" variant="outline" onClick={() => setFlagOpen(true)}>
+                <Flag className="mr-1.5 h-3.5 w-3.5" /> Create flag
+              </Button>
+            )}
+            {canOutreach && (
+              <Button size="sm" variant="outline" onClick={() => setOutreachOpen(true)}>
+                <Mail className="mr-1.5 h-3.5 w-3.5" /> Request info
+              </Button>
+            )}
+          </div>
         </div>
         <div className="text-xs text-muted-foreground capitalize">
           {tx.transaction_type.replace(/_/g, " ")} · {tx.settlement_date ?? tx.requested_execution_date ?? "—"}
         </div>
+        {isReadOnly && (
+          <div className="rounded-md border border-dashed bg-muted/40 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+            You have read-only access to this record.
+          </div>
+        )}
         <RuleHitBanner hits={ruleHits} onView={() => setActiveTab("rules")} />
       </div>
 
@@ -162,22 +217,28 @@ export function TransactionDetail({
           <TabsContent value="overview" className="m-0 space-y-3">
             <div className="rounded-md border bg-card p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Update status
+                {canUpdateStatus ? "Update status" : "Current status"}
               </div>
-              <div className="flex items-center gap-2">
-                <Select value={statusDraft} onValueChange={(v) => setStatusDraft(v as TransactionStatus)}>
-                  <SelectTrigger className="h-8 flex-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={handleSave} disabled={saving || statusDraft === tx.status}>
-                  {saving ? "Saving…" : "Save"}
-                </Button>
-              </div>
-              <div className="mt-1.5 text-[10px] text-muted-foreground">
-                PUT /api/transactions/{shortId(tx.id, 6)}
-              </div>
+              {canUpdateStatus ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Select value={statusDraft} onValueChange={(v) => setStatusDraft(v as TransactionStatus)}>
+                      <SelectTrigger className="h-8 flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={handleSave} disabled={saving || statusDraft === tx.status}>
+                      {saving ? "Saving…" : "Save"}
+                    </Button>
+                  </div>
+                  <div className="mt-1.5 text-[10px] text-muted-foreground">
+                    PUT /api/transactions/{shortId(tx.id, 6)}
+                  </div>
+                </>
+              ) : (
+                <StatusPill value={tx.status} />
+              )}
             </div>
 
             <div className="rounded-md border bg-card p-3">
@@ -347,6 +408,70 @@ export function TransactionDetail({
           </TabsContent>
         </div>
       </Tabs>
+
+      <Dialog open={flagOpen} onOpenChange={setFlagOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create flag</DialogTitle>
+            <DialogDescription>Flag this transaction for further review.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="flag-reason">Flag reason</Label>
+            <Textarea
+              id="flag-reason"
+              placeholder="Describe why this transaction is being flagged…"
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFlagOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitFlag} disabled={!flagReason.trim()}>Submit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={outreachOpen} onOpenChange={setOutreachOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request information</DialogTitle>
+            <DialogDescription>Send an outreach email to the account holder.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="outreach-to">To</Label>
+              <Input id="outreach-to" value={holder?.email ?? ""} readOnly />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="outreach-subject">Subject</Label>
+              <Input
+                id="outreach-subject"
+                value={outreachSubject}
+                onChange={(e) => setOutreachSubject(e.target.value)}
+                placeholder="Additional information needed"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="outreach-body">Message</Label>
+              <Textarea
+                id="outreach-body"
+                value={outreachBody}
+                onChange={(e) => setOutreachBody(e.target.value)}
+                rows={5}
+                placeholder="Hello, we'd like to confirm a few details about a recent transaction…"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOutreachOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendOutreach} disabled={!outreachSubject.trim() || !outreachBody.trim() || !holder?.email}>
+              Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
