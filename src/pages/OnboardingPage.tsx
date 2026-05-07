@@ -317,3 +317,17 @@ function AttachDocumentDialog({
     </Dialog>
   );
 }
+
+function HolderHits({ holderId }: { holderId: string }) {
+  const hits = useRuleHits("account_holder", holderId);
+  if (hits.length === 0) return null;
+  return (
+    <>
+      <RuleHitBanner hits={hits} />
+      <Card className="p-4">
+        <div className="mb-2 text-sm font-medium">Rule breaches ({hits.length})</div>
+        <RuleHitsTab hits={hits} />
+      </Card>
+    </>
+  );
+}
