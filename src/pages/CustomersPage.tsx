@@ -59,8 +59,8 @@ const KYC_SORT_PRIORITY: Record<KycStatus, number> = {
   approved: 4,
 };
 
-const RISK_SORT: Record<RiskLevel, number> = {
-  critical: 0, high: 1, medium: 2, low: 3,
+const RISK_SORT: Record<string, number> = {
+  prohibited: -1, critical: 0, high: 1, medium: 2, low: 3,
 };
 
 function isPending(status: KycStatus) {
