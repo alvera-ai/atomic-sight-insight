@@ -218,10 +218,11 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
         </SheetHeader>
 
         <Tabs defaultValue="definition" className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="mx-4 mt-3 grid w-auto grid-cols-3">
+          <TabsList className={cn("mx-4 mt-3 grid w-auto", canBacktest && !isNew ? "grid-cols-4" : "grid-cols-3")}>
             <TabsTrigger value="definition">Definition</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="sandbox">Sandbox</TabsTrigger>
+            {canBacktest && !isNew && <TabsTrigger value="backtest">Backtest</TabsTrigger>}
           </TabsList>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
