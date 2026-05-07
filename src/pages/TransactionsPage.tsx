@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listTransactions } from "@/api";
+import { getAllLiveHits } from "@/api/rules";
+import { listCases, subscribeCases, type Case } from "@/api/cases";
 import type { TransactionResponse, TransactionStatus, TransactionType } from "@/api/types";
 import { accountHolders, counterparties } from "@/data/fixtures";
 import { formatAmount, shortId } from "@/lib/money";
@@ -44,11 +46,26 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<TransactionType | "all">("all");
   const [sorting, setSorting] = useState<SortingState>([{ id: "inserted_at", desc: true }]);
   const [nlPrompt, setNlPrompt] = useState("");
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [cases, setCases] = useState<Case[]>([]);
   const c = useCopilot();
 
   useEffect(() => {
     listTransactions().then(setRows);
+    listCases().then(setCases);
+    return subscribeCases(() => listCases().then(setCases));
   }, []);
+
+  const flaggedTxIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const cs of cases) {
+      if (cs.source_type === "transaction" && cs.status !== "closed") ids.add(cs.source_id);
+    }
+    for (const h of getAllLiveHits()) {
+      if (h.scope === "transaction") ids.add(h.subject_id);
+    }
+    return ids;
+  }, [cases, rows]);
 
   const sourceRows = c.appliedRows ?? rows;
 
@@ -57,6 +74,7 @@ export default function TransactionsPage() {
     return sourceRows.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (typeFilter !== "all" && t.transaction_type !== typeFilter) return false;
+      if (flaggedOnly && !flaggedTxIds.has(t.id)) return false;
       if (s) {
         const blob = [t.id, t.uetr, t.end_to_end_id, t.instruction_id, t.transaction_external_id]
           .filter(Boolean)
@@ -65,7 +83,7 @@ export default function TransactionsPage() {
       }
       return true;
     });
-  }, [sourceRows, search, statusFilter, typeFilter]);
+  }, [sourceRows, search, statusFilter, typeFilter, flaggedOnly, flaggedTxIds]);
 
   const columns = useMemo<ColumnDef<TransactionResponse>[]>(() => [
     {
