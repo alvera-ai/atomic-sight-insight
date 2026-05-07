@@ -199,7 +199,7 @@ export function TransactionDetail({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-4 mt-3 grid grid-cols-6">
+        <TabsList className="mx-4 mt-3 grid grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="holder">Holder</TabsTrigger>
           <TabsTrigger value="counterparty">Parties</TabsTrigger>
@@ -208,6 +208,7 @@ export function TransactionDetail({
           <TabsTrigger value="rules" className="relative">
             Rules{ruleHits.length > 0 && <span className="ml-1 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{ruleHits.length}</span>}
           </TabsTrigger>
+          <TabsTrigger value="outreach">Outreach</TabsTrigger>
         </TabsList>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
