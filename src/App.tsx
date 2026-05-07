@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/app-layout";
 import TransactionsPage from "./pages/TransactionsPage";
+import DashboardPage from "./pages/DashboardPage";
 import CasesPage from "./pages/CasesPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ReviewPage from "./pages/ReviewPage";
