@@ -27,6 +27,9 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+import { useAuth } from "@/contexts/auth-context";
+import { NAV_ACCESS } from "@/lib/nav-access";
+
 type Role = "compliance" | "engineer";
 
 const compliance = [
@@ -47,8 +50,16 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
-  const initialRole: Role = engineer.some((i) => pathname.startsWith(i.url)) ? "engineer" : "compliance";
+  const { user } = useAuth();
+  const isEngineer = user.role === "engineer";
+
+  const visibleCompliance = compliance.filter((i) => NAV_ACCESS[i.url]?.includes(user.role));
+  const visibleEngineer = engineer.filter((i) => NAV_ACCESS[i.url]?.includes(user.role));
+
+  const initialRole: Role = isEngineer ? "engineer" : "compliance";
   const [role, setRole] = useState<Role>(initialRole);
+  // Force compliance tab if user is not an engineer
+  const activeTab: Role = isEngineer ? role : "compliance";
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
@@ -66,13 +77,13 @@ export function AppSidebar() {
             </div>
           )}
         </div>
-        {!collapsed && (
+        {!collapsed && isEngineer && (
           <div className="mx-2 mb-2 mt-1 grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
             <button
               onClick={() => setRole("compliance")}
               className={cn(
                 "rounded px-2 py-1 text-xs font-medium transition",
-                role === "compliance"
+                activeTab === "compliance"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
@@ -83,7 +94,7 @@ export function AppSidebar() {
               onClick={() => setRole("engineer")}
               className={cn(
                 "rounded px-2 py-1 text-xs font-medium transition",
-                role === "engineer"
+                activeTab === "engineer"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
@@ -95,41 +106,45 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Compliance</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {compliance.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                    <NavLink to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {(!isEngineer || activeTab === "compliance") && visibleCompliance.length > 0 && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel>Compliance</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleCompliance.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                      <NavLink to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Engineer</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {engineer.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                    <NavLink to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {isEngineer && activeTab === "engineer" && visibleEngineer.length > 0 && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel>Engineer</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleEngineer.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                      <NavLink to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
