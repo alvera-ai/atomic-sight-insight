@@ -59,7 +59,7 @@ export const getLiveHits = (scope: RuleScope, subjectId: string): RuleHit[] =>
 
 export const getAllLiveHits = (): RuleHit[] => Object.values(liveHits).flat();
 
-export const subscribe = (cb: () => void) => {
+export const subscribe = (cb: () => void): (() => void) => {
   subscribers.add(cb);
-  return () => subscribers.delete(cb);
+  return () => { subscribers.delete(cb); };
 };
