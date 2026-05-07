@@ -29,7 +29,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route element={<RouteGuard />}>
               <Route path="/" element={<Navigate to="/transactions" replace />} />
-              <Route path="/dashboard" element={<Navigate to="/transactions" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/cases" element={<CasesPage />} />
