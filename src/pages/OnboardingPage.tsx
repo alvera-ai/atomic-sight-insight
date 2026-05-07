@@ -50,6 +50,7 @@ export default function OnboardingPage() {
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [openCaseDialog, setOpenCaseDialog] = useState(false);
   const canReassign = usePermission("onboarding.approve"); // officer + analyst
+  const logAudit = useAuditLogger();
 
   useEffect(() => {
     listAccountHolders().then((all) => {
