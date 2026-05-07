@@ -33,6 +33,7 @@ import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { CasesSection } from "@/components/cases/cases-section";
 import { createCase, type CasePriority } from "@/api/cases";
 import { usePermission } from "@/hooks/use-permission";
+import { OutreachTab } from "@/components/outreach/outreach-tab";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
