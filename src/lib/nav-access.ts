@@ -3,6 +3,7 @@ import type { UserRole } from "@/contexts/auth-context";
 export const NAV_ACCESS: Record<string, UserRole[]> = {
   "/transactions": ["compliance_officer", "compliance_analyst", "compliance_ops_agent", "rules_manager", "auditor"],
   "/onboarding": ["compliance_officer", "compliance_analyst", "compliance_ops_agent", "auditor"],
+  "/cases": ["compliance_officer", "compliance_analyst", "compliance_ops_agent", "auditor"],
   "/review": ["compliance_officer", "compliance_analyst", "compliance_ops_agent", "auditor"],
   "/rules": ["compliance_officer", "compliance_analyst", "rules_manager", "auditor"],
   "/talk-to-data": ["compliance_officer", "compliance_analyst", "rules_manager", "auditor"],

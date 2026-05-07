@@ -31,6 +31,7 @@ const App = () => (
               <Route path="/dashboard" element={<Navigate to="/transactions" replace />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/cases" element={<CasesPage />} />
               <Route path="/review" element={<ReviewPage />} />
               <Route path="/rules" element={<RulesPage />} />
               <Route path="/talk-to-data" element={<TalkToDataPage />} />
