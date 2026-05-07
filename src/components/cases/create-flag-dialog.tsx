@@ -37,6 +37,7 @@ export function CreateFlagDialog({ open, onOpenChange, transactionId, defaultTit
   const [description, setDescription] = useState("");
   const [assignee, setAssignee] = useState<string>("Unassigned");
   const [due, setDue] = useState<Date | undefined>(() => new Date(Date.now() + 3 * 86_400_000));
+  const logAudit = useAuditLogger();
 
   const reset = () => {
     setType("transaction_flag");
