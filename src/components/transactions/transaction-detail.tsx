@@ -154,17 +154,6 @@ export function TransactionDetail({
     () => balances.filter((b) => b.currency === tx.currency).slice(0, 3),
     [balances, tx.currency],
   );
-
-
-  const handleSendOutreach = () => {
-    sonnerToast.success("Information request sent", {
-      description: holder?.email ? `To ${holder.email}` : "Email queued",
-    });
-    setOutreachSubject("");
-    setOutreachBody("");
-    setOutreachOpen(false);
-  };
-
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-2 border-b p-4">
