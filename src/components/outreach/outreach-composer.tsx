@@ -40,6 +40,7 @@ export function OutreachComposer({
   open, onOpenChange, subjectType, subjectId, customerName, customerEmail, onSent,
 }: OutreachComposerProps) {
   const { user } = useAuth();
+  const logAudit = useAuditLogger();
   const [templateId, setTemplateId] = useState<string>("additional_documentation");
   const [to, setTo] = useState(customerEmail);
   const [subject, setSubject] = useState("");
