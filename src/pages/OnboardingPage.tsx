@@ -23,6 +23,9 @@ import { StatusPill } from "@/components/status-pill";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { shortId } from "@/lib/money";
+import { useRuleHits } from "@/hooks/use-rule-hits";
+import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
+import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 
 const KYC_FILTERS: Array<KycStatus | "all"> = ["all", "not_started", "in_progress", "approved", "rejected", "on_hold"];
 const KYC_REQ_STATUSES: KycRequirementStatus[] = ["pending", "submitted", "approved", "rejected", "waived"];
