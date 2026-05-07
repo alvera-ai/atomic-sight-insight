@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
+import { RoleSwitcher } from "@/components/auth/role-switcher";
 
 export function TopBar() {
   const { theme, toggle } = useTheme();
@@ -41,6 +42,7 @@ export function TopBar() {
           <Bell className="h-4 w-4" />
           <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
         </Button>
+        <RoleSwitcher />
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-primary text-primary-foreground text-xs">AO</AvatarFallback>
         </Avatar>

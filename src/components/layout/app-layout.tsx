@@ -25,5 +25,6 @@ export function AppLayout() {
         </div>
       </SidebarProvider>
     </CopilotProvider>
+    </AuthProvider>
   );
 }
