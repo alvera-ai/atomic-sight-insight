@@ -101,7 +101,8 @@ export function DetailPanel({
 }
 
 function ActionButton({ action }: { action: DetailPanelAction }) {
-  const allowed = action.permission ? usePermission(action.permission) : true;
+  const allowedByPerm = usePermission(action.permission ?? "__always__");
+  const allowed = action.permission ? allowedByPerm : true;
   if (!allowed) return null;
   const Icon = action.icon;
   const orange = action.tone !== "secondary";
