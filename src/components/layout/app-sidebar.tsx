@@ -10,6 +10,7 @@ import {
   MessageSquareCode,
   Layers,
   Scale,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ import { NAV_ACCESS } from "@/lib/nav-access";
 type Role = "compliance" | "engineer";
 
 const compliance = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Transactions 360°", url: "/transactions", icon: Activity },
   { title: "Onboarding queue", url: "/onboarding", icon: ClipboardList },
   { title: "Cases", url: "/cases", icon: Briefcase },

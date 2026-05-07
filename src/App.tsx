@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/app-layout";
 import TransactionsPage from "./pages/TransactionsPage";
+import DashboardPage from "./pages/DashboardPage";
 import CasesPage from "./pages/CasesPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ReviewPage from "./pages/ReviewPage";
@@ -15,6 +16,13 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import HealthPage from "./pages/HealthPage";
 import NotFound from "./pages/NotFound";
 import { RouteGuard } from "@/components/auth/route-guard";
+import { useAuth } from "@/contexts/auth-context";
+import { ROLE_DEFAULT_ROUTE } from "@/lib/nav-access";
+
+function RoleHome() {
+  const { user } = useAuth();
+  return <Navigate to={ROLE_DEFAULT_ROUTE[user.role]} replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -27,8 +35,8 @@ const App = () => (
         <Routes>
           <Route element={<AppLayout />}>
             <Route element={<RouteGuard />}>
-              <Route path="/" element={<Navigate to="/transactions" replace />} />
-              <Route path="/dashboard" element={<Navigate to="/transactions" replace />} />
+              <Route path="/" element={<RoleHome />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/cases" element={<CasesPage />} />
