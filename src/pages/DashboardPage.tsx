@@ -173,7 +173,7 @@ export default function DashboardPage() {
               <div className="text-[11px] text-muted-foreground">Open cases grouped by priority</div>
             </div>
             <Link
-              to="/cases"
+              to="/queue"
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
               View all <ArrowRight className="h-3 w-3" />
@@ -198,7 +198,7 @@ export default function DashboardPage() {
                     <ul className="mt-2 space-y-1">
                       {list.slice(0, 3).map((c) => (
                         <li key={c.id} className="flex items-center gap-2 text-xs">
-                          <Link to="/cases" className="truncate font-medium hover:underline">
+                          <Link to="/queue" className="truncate font-medium hover:underline">
                             {c.title}
                           </Link>
                           <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
