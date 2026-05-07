@@ -54,6 +54,8 @@ export default function OnboardingPage() {
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [openCaseDialog, setOpenCaseDialog] = useState(false);
+  const [allTransactions, setAllTransactions] = useState<TransactionResponse[]>([]);
+  const [checklists, setChecklists] = useState<Record<string, ChecklistDoc[]>>({});
   const canReassign = usePermission("onboarding.approve"); // officer + analyst
   const logAudit = useAuditLogger();
 
@@ -62,6 +64,7 @@ export default function OnboardingPage() {
       setHolders(all);
       if (!selectedId && all[0]) setSelectedId(all[0].id);
     });
+    listTransactions().then(setAllTransactions);
   }, []);
 
   useEffect(() => {
@@ -69,6 +72,16 @@ export default function OnboardingPage() {
     listKycRequirements(selectedId).then(setKycs);
     listDocuments(selectedId).then(setDocs);
   }, [selectedId]);
+
+  // Lazily seed checklist per holder once
+  useEffect(() => {
+    if (!selected || checklists[selected.id]) return;
+    const volume = allTransactions
+      .filter((t) => t.account_holder_id === selected.id)
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0) / 100; // amounts are minor units in this app
+    setChecklists((prev) => ({ ...prev, [selected.id]: seedChecklist(selected, volume) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, holders.length, allTransactions.length]);
 
   const filtered = useMemo(() => {
     return holders.filter((h) => {
