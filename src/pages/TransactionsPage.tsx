@@ -163,9 +163,6 @@ export default function TransactionsPage() {
   const resetFilters = () => {
     setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setFlaggedOnly(false);
   };
-  // remove duplicated reset
-    setSearch(""); setStatusFilter("all"); setTypeFilter("all");
-  };
 
   const handleUpdated = (next: TransactionResponse) => {
     setRows((prev) => prev.map((r) => (r.id === next.id ? next : r)));
@@ -176,7 +173,9 @@ export default function TransactionsPage() {
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Transactions 360°</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {flaggedOnly ? "Transactions — flagged only" : "Transactions"}
+            </h1>
             <p className="text-xs text-muted-foreground">{filteredRows.length} of {sourceRows.length} transactions</p>
           </div>
         </div>
@@ -203,6 +202,19 @@ export default function TransactionsPage() {
                 {TYPES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setFlaggedOnly((v) => !v)}
+              className={cn(
+                "h-9 rounded-full border px-3 text-xs font-medium transition",
+                flaggedOnly
+                  ? "border-warning bg-warning text-warning-foreground hover:bg-warning/90"
+                  : "border-border bg-transparent text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Flagged{flaggedOnly ? "" : ` · ${flaggedTxIds.size}`}
+            </Button>
             <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5">
               <RotateCcw className="h-3.5 w-3.5" /> Reset
             </Button>
