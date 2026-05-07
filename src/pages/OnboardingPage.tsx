@@ -143,6 +143,28 @@ export default function OnboardingPage() {
                 <StatusPill value={selected.risk_level} />
               </div>
             </div>
+            <div className="mt-3 flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+              <Label className="text-[11px] text-muted-foreground">Assigned to</Label>
+              {canReassign ? (
+                <Select
+                  value={assignments[selected.id] ?? "Unassigned"}
+                  onValueChange={(v) => {
+                    setAssignments((prev) => ({ ...prev, [selected.id]: v }));
+                    sonnerToast.success("Reassigned", { description: v });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ONBOARDING_ASSIGNEES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm font-medium">{assignments[selected.id] ?? "Unassigned"}</span>
+              )}
+              <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setOpenCaseDialog(true)}>
+                <Briefcase className="h-3.5 w-3.5" /> Open case
+              </Button>
+            </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px] text-muted-foreground">KYC status</Label>
@@ -177,6 +199,15 @@ export default function OnboardingPage() {
               </Button>
             </div>
           </Card>
+
+          <CasesSection sourceId={selected.id} title="Cases for this holder" />
+
+          <OpenOnboardingCaseDialog
+            open={openCaseDialog}
+            onOpenChange={setOpenCaseDialog}
+            holder={selected}
+            assignedTo={assignments[selected.id] ?? "Unassigned"}
+          />
 
           <Card className="p-0">
             <div className="flex items-center justify-between border-b px-4 py-2.5">
