@@ -10,6 +10,7 @@ import {
   MessageSquareCode,
   Layers,
   Scale,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Sidebar,
