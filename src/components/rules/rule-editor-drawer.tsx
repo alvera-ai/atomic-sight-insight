@@ -126,29 +126,58 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-[1100px]">
         <SheetHeader className="space-y-2 border-b p-4">
+          {readOnly && (
+            <div className="rounded-md border border-dashed bg-muted/40 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+              You have read-only access to rules.
+            </div>
+          )}
           <div className="flex items-start gap-2">
-            <Input
-              value={draft.name}
-              onChange={(e) => update({ name: e.target.value })}
-              className="h-8 flex-1 text-base font-semibold"
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    value={draft.name}
+                    onChange={(e) => update({ name: e.target.value })}
+                    disabled={readOnly}
+                    className="h-8 flex-1 text-base font-semibold"
+                  />
+                </TooltipTrigger>
+                {readOnly && <TooltipContent>You have read-only access to rules.</TooltipContent>}
+              </Tooltip>
+            </TooltipProvider>
             <StatusPill value={draft.status} />
           </div>
           <SheetTitle className="sr-only">Edit rule</SheetTitle>
+          <div className="text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground">Last promoted:</span> {lastPromoted}
+          </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            {!isNew && draft.status === "sandbox" && (
-              <Button size="sm" onClick={promote} className="gap-1.5"><Rocket className="h-3.5 w-3.5" /> Promote to live</Button>
+            {!isNew && draft.status === "sandbox" && canPromote && (
+              <Button size="sm" onClick={() => setConfirmPromote(true)} className="gap-1.5">
+                <Rocket className="h-3.5 w-3.5" /> Promote to live
+              </Button>
             )}
-            {!isNew && draft.status === "live" && (
-              <Button size="sm" variant="outline" onClick={archive} className="gap-1.5"><Archive className="h-3.5 w-3.5" /> Archive</Button>
+            {!isNew && draft.status === "live" && canArchive && (
+              <Button size="sm" variant="outline" onClick={() => setConfirmArchive(true)} className="gap-1.5">
+                <Archive className="h-3.5 w-3.5" /> Archive
+              </Button>
             )}
-            {!isNew && draft.status === "archived" && (
-              <Button size="sm" variant="outline" onClick={restore} className="gap-1.5"><RotateCcw className="h-3.5 w-3.5" /> Restore to sandbox</Button>
+            {!isNew && draft.status === "sandbox" && canArchive && (
+              <Button size="sm" variant="outline" onClick={() => setConfirmArchive(true)} className="gap-1.5">
+                <Archive className="h-3.5 w-3.5" /> Archive
+              </Button>
             )}
-            <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
-              <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
-            </Button>
-            {!isNew && (
+            {!isNew && draft.status === "archived" && canArchive && (
+              <Button size="sm" variant="outline" onClick={restore} className="gap-1.5">
+                <RotateCcw className="h-3.5 w-3.5" /> Restore to sandbox
+              </Button>
+            )}
+            {!readOnly && (
+              <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
+              </Button>
+            )}
+            {!isNew && canArchive && (
               <Button size="sm" variant="ghost" onClick={remove} className="ml-auto gap-1.5 text-destructive">
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
