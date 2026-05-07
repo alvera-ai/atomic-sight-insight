@@ -49,6 +49,7 @@ export default function ReviewPage() {
   const [assignDialogFor, setAssignDialogFor] = useState<ComplianceScreeningResponse | null>(null);
   const [assignTo, setAssignTo] = useState<string>(REVIEW_ASSIGNEES[0]);
   const [assignPriority, setAssignPriority] = useState<"critical" | "high" | "medium" | "low">("high");
+  const reviewLog = useAuditLogger();
 
   useEffect(() => {
     listComplianceScreenings().then((s) => {
