@@ -345,4 +345,8 @@ export function TransactionDetail({
           <TabsContent value="rules" className="m-0">
             <RuleHitsTab hits={ruleHits} />
           </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
 }
