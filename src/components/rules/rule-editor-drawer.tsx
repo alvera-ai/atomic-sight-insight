@@ -64,15 +64,28 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
   const [draft, setDraft] = useState<Rule>(rule ?? emptyRule());
   const [showJson, setShowJson] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmPromote, setConfirmPromote] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+
+  const { user } = useAuth();
+  const canCreate = usePermission("rule.create");
+  const canPromote = usePermission("rule.promote");
+  const canArchive = usePermission("rule.archive");
+  const canEdit = isNew ? canCreate : canCreate; // editing rules requires create permission
+  const readOnly = !canEdit;
 
   useEffect(() => {
     if (rule) setDraft(rule);
     else if (isNew) setDraft(emptyRule());
   }, [rule, isNew, open]);
 
-  const update = (patch: Partial<Rule>) => setDraft((d) => ({ ...d, ...patch }));
+  const update = (patch: Partial<Rule>) => {
+    if (readOnly) return;
+    setDraft((d) => ({ ...d, ...patch }));
+  };
 
   const save = async () => {
+    if (readOnly) return;
     setSaving(true);
     try {
       if (isNew) {
@@ -86,13 +99,28 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
     } finally { setSaving(false); }
   };
 
-  const promote = async () => { await promoteRule(draft.id); toast({ title: "Promoted to live" }); onChanged(); onOpenChange(false); };
-  const archive = async () => { await archiveRule(draft.id); toast({ title: "Archived" }); onChanged(); onOpenChange(false); };
+  const doPromote = async () => {
+    await promoteRule(draft.id, user.name);
+    toast({ title: "Promoted to live", description: `By ${user.name}` });
+    setConfirmPromote(false);
+    onChanged(); onOpenChange(false);
+  };
+  const doArchive = async () => {
+    await archiveRule(draft.id);
+    toast({ title: "Archived" });
+    setConfirmArchive(false);
+    onChanged(); onOpenChange(false);
+  };
   const restore = async () => { await restoreRule(draft.id); toast({ title: "Restored to sandbox" }); onChanged(); onOpenChange(false); };
   const remove = async () => {
     if (!confirm("Delete this rule? This cannot be undone.")) return;
     await deleteRule(draft.id); toast({ title: "Deleted" }); onChanged(); onOpenChange(false);
   };
+
+  const lastPromoted = draft.last_promoted_at
+    ? `${draft.last_promoted_by ?? "unknown"} · ${format(new Date(draft.last_promoted_at), "yyyy-MM-dd HH:mm")}`
+    : "Never promoted";
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
