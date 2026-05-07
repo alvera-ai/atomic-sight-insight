@@ -43,7 +43,8 @@ export default function CasesPage() {
   const refresh = () => listCases().then(setCases);
   useEffect(() => {
     refresh();
-    return subscribeCases(refresh);
+    const unsub = subscribeCases(refresh);
+    return () => { unsub(); };
   }, []);
 
   const filtered = useMemo(() => {
