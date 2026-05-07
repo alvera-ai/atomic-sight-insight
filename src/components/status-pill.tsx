@@ -16,7 +16,8 @@ const STATUS_CLASSES: Record<string, string> = {
 
   low: "bg-success/15 text-success border-success/20",
   medium: "bg-warning/20 text-warning-foreground border-warning/30",
-  high: "bg-destructive/15 text-destructive border-destructive/20",
+  high: "bg-orange-500/15 text-orange-600 border-orange-500/30 dark:text-orange-400",
+  critical: "bg-destructive/25 text-destructive border-destructive/30",
   prohibited: "bg-destructive/25 text-destructive border-destructive/30",
 
   // Counterparty
@@ -40,9 +41,7 @@ const STATUS_CLASSES: Record<string, string> = {
   sandbox: "bg-info/15 text-info border-info/20",
   archived: "bg-muted text-muted-foreground border-border",
 
-  // Rule severity
-  critical: "bg-destructive/25 text-destructive border-destructive/30",
-  // (high, medium, low already defined above)
+  // Rule severity (high, medium, low, critical already defined above)
 
   // Rule action
   flag: "bg-warning/20 text-warning-foreground border-warning/30",

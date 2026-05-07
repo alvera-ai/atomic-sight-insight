@@ -35,7 +35,7 @@ export interface TransactionResponse {
 }
 
 export type KycStatus = "not_started" | "in_progress" | "approved" | "rejected" | "on_hold";
-export type RiskLevel = "low" | "medium" | "high" | "prohibited";
+export type RiskLevel = "low" | "medium" | "high" | "critical" | "prohibited";
 
 export interface AccountHolderResponse {
   id: UUID;
