@@ -170,6 +170,76 @@ export interface ApiInfoResponse {
   release_channel: string;
 }
 
+// ───── Rules engine
+export type RuleScope = "transaction" | "account_holder";
+export type RuleStatus = "sandbox" | "live" | "archived";
+export type RuleSeverity = "low" | "medium" | "high" | "critical";
+export type RuleAction = "flag" | "review" | "block";
+
+export type RuleOperator =
+  | "eq" | "neq" | "in" | "not_in"
+  | "gt" | "gte" | "lt" | "lte"
+  | "between" | "contains" | "exists";
+
+export interface RuleCondition {
+  id: string;
+  kind: "condition";
+  field: string;
+  operator: RuleOperator;
+  value: unknown;
+  weight: number; // 1-10
+}
+
+export interface RuleConditionGroup {
+  id: string;
+  kind: "group";
+  combinator: "AND" | "OR";
+  children: RuleNode[];
+}
+
+export type RuleNode = RuleCondition | RuleConditionGroup;
+
+export interface Rule {
+  id: UUID;
+  name: string;
+  description: string;
+  scope: RuleScope;
+  status: RuleStatus;
+  severity: RuleSeverity;
+  action: RuleAction;
+  threshold: number; // 0-1
+  when: RuleConditionGroup;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  version: number;
+}
+
+export interface MatchedCondition {
+  field: string;
+  operator: RuleOperator;
+  value: unknown;
+  matched: boolean;
+  weight: number;
+  actual: unknown;
+}
+
+export interface RuleHit {
+  id: UUID;
+  rule_id: UUID;
+  rule_version: number;
+  rule_name: string;
+  severity: RuleSeverity;
+  action: RuleAction;
+  scope: RuleScope;
+  subject_id: UUID;
+  confidence: number; // 0-1
+  matched_conditions: MatchedCondition[];
+  evaluated_at: string;
+  mode: "live" | "sandbox";
+}
+
 // ───── Recommendations (mock — really sourced from alvera-ai/platform)
 export type RecommendationKind =
   | "add_blocklist_entry"
