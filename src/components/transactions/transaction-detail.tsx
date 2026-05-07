@@ -100,6 +100,7 @@ export function TransactionDetail({
   const canCreateFlag = usePermission("transaction.create_flag");
   const canOutreach = usePermission("transaction.outreach");
   const isReadOnly = !canUpdateStatus && !canCreateFlag && !canOutreach;
+  const logAudit = useAuditLogger();
   const [flagOpen, setFlagOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
 
