@@ -82,7 +82,7 @@ export default function ReviewPage() {
   const submitAssign = async () => {
     if (!assignDialogFor) return;
     const s = assignDialogFor;
-    await createCase({
+    const created = await createCase({
       type: "sanctions_match",
       status: "open",
       priority: assignPriority,
@@ -92,6 +92,13 @@ export default function ReviewPage() {
       source_type: s.subject_type === "counterparty" ? "account_holder" : "account_holder",
       assigned_to: assignTo,
       due_date: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+    });
+    reviewLog({
+      action_type: "case.created",
+      resource_type: "case",
+      resource_id: created.id,
+      description: `Created sanctions match case for ${subjectLabel(s)} assigned to ${assignTo}`,
+      metadata: { type: "sanctions_match", screening_id: s.id },
     });
     sonnerToast.success("Case assigned", { description: `${subjectLabel(s)} → ${assignTo}` });
     setAssignDialogFor(null);
