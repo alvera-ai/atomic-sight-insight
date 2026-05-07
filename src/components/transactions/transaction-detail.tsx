@@ -99,7 +99,6 @@ export function TransactionDetail({
   const canOutreach = usePermission("transaction.outreach");
   const isReadOnly = !canUpdateStatus && !canCreateFlag && !canOutreach;
   const [flagOpen, setFlagOpen] = useState(false);
-  const [flagReason, setFlagReason] = useState("");
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachSubject, setOutreachSubject] = useState("");
   const [outreachBody, setOutreachBody] = useState("");
@@ -156,11 +155,6 @@ export function TransactionDetail({
     [balances, tx.currency],
   );
 
-  const handleSubmitFlag = () => {
-    sonnerToast.success("Flag created", { description: flagReason || "No reason provided" });
-    setFlagReason("");
-    setFlagOpen(false);
-  };
 
   const handleSendOutreach = () => {
     sonnerToast.success("Information request sent", {
