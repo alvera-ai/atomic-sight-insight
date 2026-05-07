@@ -59,7 +59,8 @@ import { useRuleHits } from "@/hooks/use-rule-hits";
 import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
 import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 import { usePermission } from "@/hooks/use-permission";
-
+import { CreateFlagDialog } from "@/components/cases/create-flag-dialog";
+import { CasesSection } from "@/components/cases/cases-section";
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
@@ -409,28 +410,16 @@ export function TransactionDetail({
         </div>
       </Tabs>
 
-      <Dialog open={flagOpen} onOpenChange={setFlagOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create flag</DialogTitle>
-            <DialogDescription>Flag this transaction for further review.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="flag-reason">Flag reason</Label>
-            <Textarea
-              id="flag-reason"
-              placeholder="Describe why this transaction is being flagged…"
-              value={flagReason}
-              onChange={(e) => setFlagReason(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setFlagOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitFlag} disabled={!flagReason.trim()}>Submit</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <div className="border-t p-4">
+        <CasesSection sourceId={tx.id} />
+      </div>
+
+      <CreateFlagDialog
+        open={flagOpen}
+        onOpenChange={setFlagOpen}
+        transactionId={tx.id}
+        defaultTitle={`Transaction ${tx.id.slice(0, 8)} flagged`}
+      />
 
       <Dialog open={outreachOpen} onOpenChange={setOutreachOpen}>
         <DialogContent className="sm:max-w-md">
