@@ -74,6 +74,13 @@ export function OutreachComposer({
         document_requests: docs,
         sent_by: user.name,
       });
+      logAudit({
+        action_type: "outreach.sent",
+        resource_type: subjectType === "transaction" ? "transaction" : "account_holder",
+        resource_id: subjectId,
+        description: `Sent outreach '${subject.trim()}' to ${to.trim()}`,
+        metadata: { template: templateId, document_requests: docs },
+      });
       sonnerToast.success("Outreach sent", { description: `To ${to.trim()}` });
       onSent?.();
       onOpenChange(false);
