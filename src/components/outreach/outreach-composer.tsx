@@ -40,24 +40,35 @@ function applyPlaceholders(text: string, customerName: string, subjectId: string
 
 export function OutreachComposer({
   open, onOpenChange, subjectType, subjectId, customerName, customerEmail, onSent,
+  prefilledTemplate, prefilledDocs,
 }: OutreachComposerProps) {
   const { user } = useAuth();
   const logAudit = useAuditLogger();
-  const [templateId, setTemplateId] = useState<string>("additional_documentation");
+  const [templateId, setTemplateId] = useState<string>(prefilledTemplate ?? "additional_documentation");
   const [to, setTo] = useState(customerEmail);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [docs, setDocs] = useState<string[]>([]);
+  const [docs, setDocs] = useState<string[]>(prefilledDocs ?? []);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTo(customerEmail);
+    const initialTpl = prefilledTemplate ?? templateId;
+    setTemplateId(initialTpl);
+    const tpl = OUTREACH_TEMPLATES.find((t) => t.id === initialTpl)!;
+    setSubject(applyPlaceholders(tpl.subject, customerName, subjectId));
+    setBody(applyPlaceholders(tpl.body, customerName, subjectId));
+    setDocs(prefilledDocs ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, customerEmail, customerName, subjectId, prefilledTemplate, prefilledDocs?.join("|")]);
+
+  useEffect(() => {
+    if (!open) return;
     const tpl = OUTREACH_TEMPLATES.find((t) => t.id === templateId)!;
     setSubject(applyPlaceholders(tpl.subject, customerName, subjectId));
     setBody(applyPlaceholders(tpl.body, customerName, subjectId));
-    setDocs([]);
-  }, [open, templateId, customerEmail, customerName, subjectId]);
+  }, [templateId]);
 
   const toggleDoc = (d: string) =>
     setDocs((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
