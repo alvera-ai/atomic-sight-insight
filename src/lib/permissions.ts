@@ -16,6 +16,8 @@ export const PERMISSIONS: Record<string, UserRole[]> = {
   "recommendations.approve": ["compliance_officer"],
   "integrations.access": ["engineer"],
   "health.access": ["engineer"],
+  "audit.view": ["compliance_officer", "auditor"],
+  "audit.export": ["compliance_officer", "auditor"],
 };
 
 export function hasPermission(role: UserRole, action: string): boolean {
