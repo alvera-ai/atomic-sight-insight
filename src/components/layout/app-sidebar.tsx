@@ -77,13 +77,13 @@ export function AppSidebar() {
             </div>
           )}
         </div>
-        {!collapsed && (
+        {!collapsed && isEngineer && (
           <div className="mx-2 mb-2 mt-1 grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
             <button
               onClick={() => setRole("compliance")}
               className={cn(
                 "rounded px-2 py-1 text-xs font-medium transition",
-                role === "compliance"
+                activeTab === "compliance"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
@@ -94,7 +94,7 @@ export function AppSidebar() {
               onClick={() => setRole("engineer")}
               className={cn(
                 "rounded px-2 py-1 text-xs font-medium transition",
-                role === "engineer"
+                activeTab === "engineer"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
@@ -106,41 +106,45 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Compliance</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {compliance.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                    <NavLink to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {(!isEngineer || activeTab === "compliance") && visibleCompliance.length > 0 && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel>Compliance</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleCompliance.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                      <NavLink to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Engineer</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {engineer.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                    <NavLink to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {isEngineer && activeTab === "engineer" && visibleEngineer.length > 0 && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel>Engineer</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleEngineer.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                      <NavLink to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
