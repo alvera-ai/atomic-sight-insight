@@ -20,9 +20,14 @@ export const createRule = (rule: Omit<Rule, "id" | "created_at" | "updated_at" |
   upsertRule(created);
   return delay(created, 250);
 };
-export const promoteRule = async (id: string): Promise<Rule> => {
+export const promoteRule = async (id: string, by?: string): Promise<Rule> => {
   const r = getRules().find((x) => x.id === id); if (!r) throw new Error("not found");
-  return saveRule({ ...r, status: "live" });
+  return saveRule({
+    ...r,
+    status: "live",
+    last_promoted_by: by ?? r.last_promoted_by ?? "unknown",
+    last_promoted_at: new Date().toISOString(),
+  });
 };
 export const archiveRule = async (id: string): Promise<Rule> => {
   const r = getRules().find((x) => x.id === id); if (!r) throw new Error("not found");

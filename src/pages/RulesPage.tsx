@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusPill } from "@/components/status-pill";
 import { listRules, getAllLiveHits, subscribe } from "@/api/rules";
 import { RuleEditorDrawer } from "@/components/rules/rule-editor-drawer";
+import { RoleGate } from "@/components/auth/role-gate";
 
 export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
@@ -52,9 +53,11 @@ export default function RulesPage() {
               Every transaction and account holder is evaluated. Sandbox rules don't affect production.
             </p>
           </div>
-          <Button onClick={openNew} size="sm" className="ml-auto gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> New rule
-          </Button>
+          <RoleGate action="rule.create">
+            <Button onClick={openNew} size="sm" className="ml-auto gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> New rule
+            </Button>
+          </RoleGate>
         </div>
         <div className="mt-3 flex items-center gap-2">
           <Tabs value={tab} onValueChange={(v) => setTab(v as RuleStatus)}>
