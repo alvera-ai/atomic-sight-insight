@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/app-layout";
 import TransactionsPage from "./pages/TransactionsPage";
+import CasesPage from "./pages/CasesPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ReviewPage from "./pages/ReviewPage";
 import TalkToDataPage from "./pages/TalkToDataPage";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/dashboard" element={<Navigate to="/transactions" replace />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/cases" element={<CasesPage />} />
               <Route path="/review" element={<ReviewPage />} />
               <Route path="/rules" element={<RulesPage />} />
               <Route path="/talk-to-data" element={<TalkToDataPage />} />

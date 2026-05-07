@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Activity,
+  Briefcase,
   ClipboardList,
   Sparkles,
   ShieldAlert,
@@ -35,6 +36,7 @@ type Role = "compliance" | "engineer";
 const compliance = [
   { title: "Transactions 360°", url: "/transactions", icon: Activity },
   { title: "Onboarding queue", url: "/onboarding", icon: ClipboardList },
+  { title: "Cases", url: "/cases", icon: Briefcase },
   { title: "Review queue", url: "/review", icon: ShieldAlert },
   { title: "Rules", url: "/rules", icon: Scale },
   { title: "Talk to data", url: "/talk-to-data", icon: MessageSquareCode },
