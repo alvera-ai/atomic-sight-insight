@@ -8,6 +8,7 @@ import {
   HeartPulse,
   MessageSquareCode,
   Layers,
+  Scale,
 } from "lucide-react";
 import {
   Sidebar,
