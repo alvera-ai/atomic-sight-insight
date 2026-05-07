@@ -27,6 +27,9 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+import { useAuth } from "@/contexts/auth-context";
+import { NAV_ACCESS } from "@/lib/nav-access";
+
 type Role = "compliance" | "engineer";
 
 const compliance = [
@@ -47,8 +50,16 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
-  const initialRole: Role = engineer.some((i) => pathname.startsWith(i.url)) ? "engineer" : "compliance";
+  const { user } = useAuth();
+  const isEngineer = user.role === "engineer";
+
+  const visibleCompliance = compliance.filter((i) => NAV_ACCESS[i.url]?.includes(user.role));
+  const visibleEngineer = engineer.filter((i) => NAV_ACCESS[i.url]?.includes(user.role));
+
+  const initialRole: Role = isEngineer ? "engineer" : "compliance";
   const [role, setRole] = useState<Role>(initialRole);
+  // Force compliance tab if user is not an engineer
+  const activeTab: Role = isEngineer ? role : "compliance";
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
