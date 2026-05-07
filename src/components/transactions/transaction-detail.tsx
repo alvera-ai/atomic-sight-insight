@@ -43,6 +43,9 @@ import type {
 } from "@/api/types";
 import { formatAmount, shortId } from "@/lib/money";
 import { StatusPill } from "@/components/status-pill";
+import { useRuleHits } from "@/hooks/use-rule-hits";
+import { RuleHitBanner } from "@/components/rules/rule-hit-banner";
+import { RuleHitsTab } from "@/components/rules/rule-hits-tab";
 
 const STATUSES: TransactionStatus[] = ["pending", "accepted", "settled", "rejected", "reversed", "cancelled"];
 
