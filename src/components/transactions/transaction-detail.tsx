@@ -144,6 +144,13 @@ export function TransactionDetail({
     try {
       const next = await updateTransaction(tx.id, { status: statusDraft });
       onUpdated(next);
+      logAudit({
+        action_type: "transaction.status_updated",
+        resource_type: "transaction",
+        resource_id: tx.id,
+        description: `Updated transaction status from ${tx.status} to ${statusDraft}`,
+        metadata: { from: tx.status, to: statusDraft },
+      });
       toast({ title: "Transaction updated", description: `Status set to ${statusDraft}.` });
     } catch (e) {
       toast({ title: "Update failed", description: String(e), variant: "destructive" });
