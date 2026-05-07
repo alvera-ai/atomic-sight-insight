@@ -77,6 +77,8 @@ export function TransactionDetail({
   const [balances, setBalances] = useState<LedgerAccountBalanceResponse[]>([]);
   const [statusDraft, setStatusDraft] = useState<TransactionStatus>(tx.status ?? "pending");
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const ruleHits = useRuleHits("transaction", tx.id);
 
   useEffect(() => {
     setStatusDraft(tx.status ?? "pending");
