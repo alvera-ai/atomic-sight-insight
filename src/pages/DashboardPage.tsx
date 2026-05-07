@@ -237,7 +237,7 @@ export default function DashboardPage() {
                       {RULE_HITS[r.name] ?? Math.floor(5 + Math.random() * 40)}
                     </td>
                     <td className="px-4 py-2 capitalize text-muted-foreground">
-                      {r.action?.kind?.replace(/_/g, " ") ?? "review"}
+                      {(typeof r.action === "string" ? r.action : (r.action as { kind?: string })?.kind ?? "review").replace(/_/g, " ")}
                     </td>
                   </tr>
                 ))}
