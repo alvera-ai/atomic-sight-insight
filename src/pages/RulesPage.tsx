@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
-import type { Rule, RuleStatus } from "@/api/types";
+import type { Jurisdiction, Rule, RuleStatus } from "@/api/types";
+import { JURISDICTION_LABELS } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/status-pill";
 import { listRules, getAllLiveHits, subscribe } from "@/api/rules";
 import { RuleEditorDrawer } from "@/components/rules/rule-editor-drawer";
@@ -74,6 +76,7 @@ export default function RulesPage() {
 
 function RulesTab() {
   const [rules, setRules] = useState<Rule[]>([]);
+  const [jurisdiction, setJurisdiction] = useState<Jurisdiction | "ALL">("ALL");
   const [tab, setTab] = useState<RuleStatus>("live");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Rule | null>(null);
@@ -100,7 +103,8 @@ function RulesTab() {
 
   const filtered = rules
     .filter((r) => r.status === tab)
-    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.tags.some((t) => t.includes(search.toLowerCase())));
+    .filter((r) => jurisdiction === "ALL" || (r.jurisdictions ?? []).includes(jurisdiction))
+    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.tags.some((t) => t.includes(search.toLowerCase())) || (r.regulation ?? "").toLowerCase().includes(search.toLowerCase()));
 
   const openEdit = (r: Rule) => { setCreating(false); setEditing(r); setOpen(true); };
   const openNew = () => { setCreating(true); setEditing(null); setOpen(true); };
