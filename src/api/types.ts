@@ -176,6 +176,28 @@ export type RuleStatus = "sandbox" | "live" | "archived";
 export type RuleSeverity = "low" | "medium" | "high" | "critical";
 export type RuleAction = "flag" | "review" | "block";
 
+export type Jurisdiction =
+  | "GLOBAL" | "US" | "UK" | "EU" | "CA"
+  | "UAE" | "SA" | "QA" | "BH" | "KW" | "OM"
+  | "IN" | "SG" | "AU";
+
+export const JURISDICTION_LABELS: Record<Jurisdiction, string> = {
+  GLOBAL: "Global / FATF",
+  US: "United States",
+  UK: "United Kingdom",
+  EU: "European Union",
+  CA: "Canada",
+  UAE: "United Arab Emirates",
+  SA: "Saudi Arabia",
+  QA: "Qatar",
+  BH: "Bahrain",
+  KW: "Kuwait",
+  OM: "Oman",
+  IN: "India",
+  SG: "Singapore",
+  AU: "Australia",
+};
+
 export type RuleOperator =
   | "eq" | "neq" | "in" | "not_in"
   | "gt" | "gte" | "lt" | "lte"
@@ -256,6 +278,10 @@ export interface Rule {
   content?: JdmGraph;
   /** Optional custom input schema (generalized fact shape). */
   inputSchema?: JdmInputField[];
+  /** Regulatory regimes this rule satisfies. Empty = unscoped. */
+  jurisdictions?: Jurisdiction[];
+  /** Citation of the underlying regulation, e.g. "31 CFR 1010.311 (BSA CTR)". */
+  regulation?: string;
   tags: string[];
   created_at: string;
   updated_at: string;

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Archive, Copy, Rocket, RotateCcw, Save, Trash2 } from "lucide-react";
-import type { Rule, RuleAction, RuleScope, RuleSeverity } from "@/api/types";
+import type { Jurisdiction, Rule, RuleAction, RuleScope, RuleSeverity } from "@/api/types";
+import { JURISDICTION_LABELS } from "@/api/types";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -308,6 +309,40 @@ export function RuleEditorDrawer({ rule, isNew, open, onOpenChange, onChanged }:
                 <Label className="text-[11px]">Threshold ({Math.round(draft.threshold * 100)}%)</Label>
                 <Slider value={[draft.threshold * 100]} min={0} max={100} step={5} onValueChange={(v) => update({ threshold: v[0] / 100 })} disabled={readOnly} className="mt-2" />
                 <div className="mt-1 text-[11px] text-muted-foreground">Hit fires only when matched-weight ratio ≥ threshold.</div>
+              </div>
+              <div>
+                <Label className="text-[11px]">Jurisdictions</Label>
+                <div className="mt-1 grid grid-cols-3 gap-1.5 rounded-md border p-2">
+                  {(Object.keys(JURISDICTION_LABELS) as Jurisdiction[]).map((j) => {
+                    const checked = (draft.jurisdictions ?? []).includes(j);
+                    return (
+                      <label key={j} className="flex cursor-pointer items-center gap-1.5 text-[11px]">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={readOnly}
+                          onChange={(e) => {
+                            const cur = new Set(draft.jurisdictions ?? []);
+                            if (e.target.checked) cur.add(j); else cur.delete(j);
+                            update({ jurisdictions: Array.from(cur) });
+                          }}
+                        />
+                        <span className="font-medium">{j}</span>
+                        <span className="truncate text-muted-foreground">{JURISDICTION_LABELS[j]}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <Label className="text-[11px]">Regulation citation</Label>
+                <Input
+                  value={draft.regulation ?? ""}
+                  onChange={(e) => update({ regulation: e.target.value })}
+                  readOnly={readOnly}
+                  placeholder="e.g. 31 CFR 1010.311 (BSA CTR)"
+                  className="h-8"
+                />
               </div>
               <div>
                 <Label className="text-[11px]">Tags (comma-separated)</Label>

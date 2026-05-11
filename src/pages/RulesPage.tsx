@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
-import type { Rule, RuleStatus } from "@/api/types";
+import type { Jurisdiction, Rule, RuleStatus } from "@/api/types";
+import { JURISDICTION_LABELS } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/status-pill";
 import { listRules, getAllLiveHits, subscribe } from "@/api/rules";
 import { RuleEditorDrawer } from "@/components/rules/rule-editor-drawer";
@@ -74,6 +76,7 @@ export default function RulesPage() {
 
 function RulesTab() {
   const [rules, setRules] = useState<Rule[]>([]);
+  const [jurisdiction, setJurisdiction] = useState<Jurisdiction | "ALL">("ALL");
   const [tab, setTab] = useState<RuleStatus>("live");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Rule | null>(null);
@@ -100,7 +103,8 @@ function RulesTab() {
 
   const filtered = rules
     .filter((r) => r.status === tab)
-    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.tags.some((t) => t.includes(search.toLowerCase())));
+    .filter((r) => jurisdiction === "ALL" || (r.jurisdictions ?? []).includes(jurisdiction))
+    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.tags.some((t) => t.includes(search.toLowerCase())) || (r.regulation ?? "").toLowerCase().includes(search.toLowerCase()));
 
   const openEdit = (r: Rule) => { setCreating(false); setEditing(r); setOpen(true); };
   const openNew = () => { setCreating(true); setEditing(null); setOpen(true); };
@@ -121,7 +125,7 @@ function RulesTab() {
             </Button>
           </RoleGate>
         </div>
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Tabs value={tab} onValueChange={(v) => setTab(v as RuleStatus)}>
             <TabsList>
               <TabsTrigger value="live">Live · {counts.live}</TabsTrigger>
@@ -129,14 +133,26 @@ function RulesTab() {
               <TabsTrigger value="archived">Archived · {counts.archived}</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Input placeholder="Search rules…" value={search} onChange={(e) => setSearch(e.target.value)} className="ml-auto h-8 max-w-xs" />
+          <Select value={jurisdiction} onValueChange={(v) => setJurisdiction(v as Jurisdiction | "ALL")}>
+            <SelectTrigger className="h-8 w-[200px]">
+              <SelectValue placeholder="All jurisdictions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All jurisdictions</SelectItem>
+              {(Object.keys(JURISDICTION_LABELS) as Jurisdiction[]).map((j) => (
+                <SelectItem key={j} value={j}>{j} · {JURISDICTION_LABELS[j]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input placeholder="Search rules, tags, regulation…" value={search} onChange={(e) => setSearch(e.target.value)} className="ml-auto h-8 max-w-xs" />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <Card className="p-0">
-          <div className="grid grid-cols-[1.6fr_120px_110px_100px_90px_140px] border-b bg-muted/40 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="grid grid-cols-[1.6fr_140px_110px_100px_90px_90px_120px] border-b bg-muted/40 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             <div>Name</div>
+            <div>Jurisdiction</div>
             <div>Scope</div>
             <div>Severity</div>
             <div>Action</div>
@@ -147,16 +163,22 @@ function RulesTab() {
             <button
               key={r.id}
               onClick={() => openEdit(r)}
-              className="grid w-full grid-cols-[1.6fr_120px_110px_100px_90px_140px] items-center border-b px-3 py-2.5 text-left text-xs transition last:border-b-0 hover:bg-muted/30"
+              className="grid w-full grid-cols-[1.6fr_140px_110px_100px_90px_90px_120px] items-center border-b px-3 py-2.5 text-left text-xs transition last:border-b-0 hover:bg-muted/30"
             >
               <div>
                 <div className="font-medium">{r.name}</div>
                 {r.description && <div className="truncate text-[11px] text-muted-foreground">{r.description}</div>}
+                {r.regulation && <div className="mt-0.5 truncate text-[10px] italic text-muted-foreground">{r.regulation}</div>}
                 {r.tags.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
                     {r.tags.map((t) => <span key={t} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t}</span>)}
                   </div>
                 )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(r.jurisdictions ?? []).map((j) => (
+                  <span key={j} className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium">{j}</span>
+                ))}
               </div>
               <div className="capitalize">{r.scope.replace(/_/g, " ")}</div>
               <div><StatusPill value={r.severity} /></div>
@@ -166,7 +188,7 @@ function RulesTab() {
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="px-4 py-12 text-center text-sm text-muted-foreground">No rules in this state.</div>
+            <div className="px-4 py-12 text-center text-sm text-muted-foreground">No rules match these filters.</div>
           )}
         </Card>
       </div>
